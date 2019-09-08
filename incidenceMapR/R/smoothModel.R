@@ -42,8 +42,10 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
   hyper=list()
   hyper$global <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
   hyper$local <- list(prec = list( prior = "pc.prec", param = 1/100, alpha = 0.01))
-  hyper$age <- list(prec = list( prior = "pc.prec", param = 1, alpha = 0.01))
- 
+  hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
+  hyper$site_time <- list(prec = list( prior = "pc.prec", param = 1e-2, alpha = 0.01))
+  hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   
   # we smooth across factor levels with random effects replicates: http://www.r-inla.org/models/tools#TOC-Models-with-more-than-one-type-of-likelihood
   validFactorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('pathogen','n','positive')) | 
@@ -51,7 +53,8 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
                                                                 grepl('age',names(db$observedData)) | 
                                                                 grepl('residence_',names(db$observedData)) | 
                                                                 grepl('work_',names(db$observedData)) |
-                                                                grepl('encounter',names(db$observedData))  )]
+                                                                grepl('encounter',names(db$observedData)) |
+                                                                grepl('site',names(db$observedData)) )]
   
   factorIdx <- validFactorNames %in% names(db$observedData) 
   
@@ -94,14 +97,41 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
       #INLA needs one column per random effect
       inputData$time_row_rw2 <- inputData$time_row
 
-      formula <- update(formula,  ~ . + f(time_row_rw2, model='rw2', hyper=modelDefinition$hyper$global, replicate=replicateIdx))
+      formula <- update(formula,  ~ . + f(time_row_rw2, model='rw2', hyper=modelDefinition$hyper$global, diagonal=1e-3, replicate=replicateIdx))
     }
     
     if(COLUMN == 'age_row'){
       
       inputData$age_row_rw2 <- inputData$age_row
 
-      formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', hyper=modelDefinition$hyper$age, replicate=replicateIdx))
+      formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', hyper=modelDefinition$hyper$age, diagonal=1e-3, replicate=replicateIdx, constr = TRUE))
+    }
+    
+    if(grepl('site',COLUMN)){
+      
+      # site intercept
+      inputData$site_row_iid <- match(inputData[[COLUMN]],unique(inputData[[COLUMN]]))
+      formula <- update(formula,  ~ . + f(site_row_iid, model='iid', hyper=modelDefinition$hyper$site_iid, replicate=replicateIdx))
+      
+      # site-time interaction
+      # if('time_row' %in% names(inputData)){
+      #   inputData$site_time_timeIdx <- inputData$time_row
+      #   inputData$site_time_siteIdx <- inputData$site_row_iid
+      #   
+      #   formula <- update(formula,  ~ . + f(site_time_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_time, constr = TRUE, replicate=replicateIdx,
+      #                                       group = site_time_timeIdx, control.group=list(model="rw1")))
+      # }
+      
+      # site-age interaction
+      # sites do collect different ages because of who accesses each site.
+      if('age_row' %in% names(inputData)){
+        inputData$site_age_ageIdx <- inputData$age_row
+        inputData$site_age_siteIdx <- inputData$site_row_iid
+        
+        formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
+                                            group = site_age_ageIdx, control.group=list(model="rw1")))
+                # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
+      }
     }
     
     if(COLUMN %in% c('residence_puma')){
@@ -112,11 +142,11 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
         
         inputData$time_row_residence_puma <- inputData$time_row
         
-        formula <- update(formula,  ~ . + f(residence_pumaRow, model='iid', hyper=modelDefinition$global, constr = TRUE, replicate=replicateIdx,
+        formula <- update(formula,  ~ . + f(residence_pumaRow, model='iid', diagonal=1e-3, hyper=modelDefinition$global, constr = TRUE, replicate=replicateIdx,
                                             group = time_row_residence_puma, control.group=list(model="rw2")))
       } else {
         
-        formula <- update(formula,  ~ . + f(residence_pumaRow, model='iid', hyper=modelDefinition$hyper$global, replicate=replicateIdx))
+        formula <- update(formula,  ~ . + f(residence_pumaRow, model='iid', diagonal=1e-3, hyper=modelDefinition$hyper$global, replicate=replicateIdx))
       }
     }
     
@@ -128,11 +158,11 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
         
         inputData$time_row_residence_cra_name <- inputData$time_row
         
-        formula <- update(formula,  ~ . + f(residence_cra_nameRow, model='iid', hyper=modelDefinition$global, constr = TRUE, replicate=replicateIdx,
+        formula <- update(formula,  ~ . + f(residence_cra_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$global, constr = TRUE, replicate=replicateIdx,
                                             group = time_row_residence_cra_name, control.group=list(model="rw2")))
       } else {
         
-        formula <- update(formula,  ~ . + f(residence_cra_nameRow, model='iid', hyper=modelDefinition$hyper$global, replicate=replicateIdx))
+        formula <- update(formula,  ~ . + f(residence_cra_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$hyper$global, replicate=replicateIdx))
       }
     }
     
@@ -144,11 +174,11 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
         
         inputData$time_row_residence_neighborhood_district_name <- inputData$time_row
         
-        formula <- update(formula,  ~ . + f(residence_neighborhood_district_nameRow, model='iid', hyper=modelDefinition$global, constr = TRUE, replicate=replicateIdx,
+        formula <- update(formula,  ~ . + f(residence_neighborhood_district_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$global, constr = TRUE, replicate=replicateIdx,
                                             group = time_row_residence_neighborhood_district_name, control.group=list(model="rw2")))
       } else {
         
-        formula <- update(formula,  ~ . + f(residence_neighborhood_district_nameRow, model='iid', hyper=modelDefinition$hyper$global, replicate=replicateIdx))
+        formula <- update(formula,  ~ . + f(residence_neighborhood_district_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$hyper$global, replicate=replicateIdx))
       }
     }
     
@@ -162,10 +192,10 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
           
           inputData$time_row_residence_census_tract <- inputData$time_row
           
-          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='besag', graph=modelDefinition$neighborGraph, constr = TRUE, hyper=modelDefinition$hyper$local, replicate=replicateIdx,
+          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='besag', diagonal=1e-3, graph=modelDefinition$neighborGraph, constr = TRUE, hyper=modelDefinition$hyper$local, replicate=replicateIdx,
                                               group = time_row_residence_census_tract, control.group=list(model="rw2")))
         } else {
-          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='bym2', graph=modelDefinition$neighborGraph, constr = TRUE, hyper=modelDefinition$hyper$local, replicate=replicateIdx))
+          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='bym2', diagonal=1e-3, graph=modelDefinition$neighborGraph, constr = TRUE, hyper=modelDefinition$hyper$local, replicate=replicateIdx))
         }
       } else {
         
@@ -175,10 +205,10 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
           
           inputData$time_row_residence_census_tract <- inputData$time_row
           
-          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='iid', graph=modelDefinition$neighborGraph, hyper=modelDefinition$hyper$local, replicate=replicateIdx,
+          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='iid', diagonal=1e-3, graph=modelDefinition$neighborGraph, hyper=modelDefinition$hyper$local, replicate=replicateIdx,
                                               group = time_row_residence_census_tract, control.group=list(model="rw2")))
         } else {
-          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='iid', graph=modelDefinition$neighborGraph, hyper=modelDefinition$hyper$local, replicate=replicateIdx))
+          formula <- update(formula,  ~ . + f(residence_census_tractRow, model='iid', diagonal=1e-3, graph=modelDefinition$neighborGraph, hyper=modelDefinition$hyper$local, replicate=replicateIdx))
         }
         
       }
