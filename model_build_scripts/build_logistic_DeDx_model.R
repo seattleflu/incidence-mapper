@@ -21,7 +21,7 @@ fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan')
 
 factors   <- c('site_type')
 
-geoLevels <- list( # seattle_geojson = c('residence_neighborhood_district_name'),
+geoLevels <- list( seattle_geojson = c('residence_neighborhood_district_name'),
                    king_county_geojson = c('residence_puma')#,'residence_census_tract')
                  )
 
@@ -69,12 +69,12 @@ for (SOURCE in names(geoLevels)){
           
           vizSite <- unique(db$observedData$site_type)
           
-          SITE=vizSite[9]
+          # SITE=vizSite[9]
           
           for(SITE in vizSite){
           
               
-            dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarinngs = FALSE)
+            dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
             fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('DeDx',SOURCE,GEO,SITE,'age_range_fine_upper','encountered_week','mode',sep='-'),'.png',sep='')
             png(filename = fname,width = 6, height = 5, units = "in", res = 300)
             print(
