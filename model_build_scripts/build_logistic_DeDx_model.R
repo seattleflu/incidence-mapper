@@ -12,18 +12,13 @@ library(ggplot2)
 SRC <- 'production'
 # SRC <- 'simulated_data'
 
-# db <- selectFromDB(queryIn= list(SELECT  =c("*")), source = SRC)
-# 
-# pathogens <- db$observedData %>% group_by(pathogen) %>% summarize(n = n()) %>% arrange(desc(n))
-
-
-fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan')
+fluABtestPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan')
 
 factors   <- c('site_type')
 
-geoLevels <- list( seattle_geojson = c('residence_neighborhood_district_name'),
-                   king_county_geojson = c('residence_puma')#,'residence_census_tract')
-                 )
+geoLevels <- list( king_county_geojson = c('residence_puma'),
+                   wa_geojson = c('residence_puma'),
+                   seattle_geojson = c('residence_neighborhood_district_name')                 )
 
 #####################################
 ###### DeDx smooth model ############
@@ -32,22 +27,13 @@ geoLevels <- list( seattle_geojson = c('residence_neighborhood_district_name'),
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
 
-    SOURCE='king_county_geojson'
-    GEO='residence_puma'
-    
     shp <- masterSpatialDB(shape_level = gsub('residence_','',GEO), source = SOURCE)
     
     queryIn <- list(
       SELECT   =list(COLUMN=c('pathogen',factors, GEO,'encountered_week','age_range_fine_upper')),
       GROUP_BY =list(COLUMN=c(factors,GEO,'encountered_week','age_range_fine_upper')),
-      SUMMARIZE=list(COLUMN='pathogen', IN= fluPathogens)
+      SUMMARIZE=list(COLUMN='pathogen', IN= fluABtestPathogens)
     )
-    
-    # queryIn <- list(
-    #   SELECT   =list(COLUMN=c('pathogen',factors, GEO,'age_range_fine_upper')),
-    #   GROUP_BY =list(COLUMN=c(factors,GEO,'age_range_fine_upper')),
-    #   SUMMARIZE=list(COLUMN='pathogen', IN= fluPathogens)
-    # )
     
     db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp )
   
@@ -65,12 +51,11 @@ for (SOURCE in names(geoLevels)){
           
           print(summary(model$inla))
           
-          # saveModel(model)
+          saveModel(model)
           
           vizSite <- unique(db$observedData$site_type)
           
-          # SITE=vizSite[9]
-          
+
           for(SITE in vizSite){
           
               
@@ -80,10 +65,8 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$modeledData %>% filter(site_type == SITE)) +
                     geom_line(aes_string(x='encountered_week',y="modeled_fraction_mode", group=GEO,color=GEO)) +
-                    # geom_line(aes_string(x='age_range_fine_upper',y="modeled_fraction_mode", group=GEO,color=GEO)) +
-                    # facet_wrap('site_type') +
                     facet_wrap('age_range_fine_upper') +
-                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_fraction_lower_95_CI", ymax="modeled_fraction_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                     guides(color=FALSE) +
                     theme(axis.text.x = element_text(angle = 90, hjust = 1))
               )
@@ -94,10 +77,7 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$modeledData %>% filter(site_type == SITE)) +
                 geom_line(aes_string(x='encountered_week',y="modeled_fraction_sd", group=GEO,color=GEO)) +
-                # geom_line(aes_string(x='age_range_fine_upper',y="modeled_fraction_sd", group=GEO,color=GEO)) +
-                # facet_wrap('site_type') +
                 facet_wrap('age_range_fine_upper') +
-                # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                 guides(color=FALSE) +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))
             )
