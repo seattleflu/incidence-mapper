@@ -1,5 +1,5 @@
 BUILD_CONTAINER_NAME ?= idm-docker-staging.packages.idmod.org/sfim-build-env:latest
-
+TEST_CONTAINER_NAME ?= sfim-build-test:latest
 .PHONY= get_version build-r-env build-r-package build-api help
 
 help: ## This help.
@@ -37,8 +37,7 @@ build-r-package: clean pull-r-env ## Build the r package as tar ball
 				cd ../modelServR && R CMD build ."
 
 test-build-r-env: ## test build docker container from scratch
-	TEST_CONTAINER_NAME ?= sfim-build-test:latest
-	docker rmi ${TEST_CONTAINER_NAME}
+	-docker rmi ${TEST_CONTAINER_NAME}
 	docker build -f Dockerfile.RBuildEnv . \
 		-t ${TEST_CONTAINER_NAME}
 	docker run -u $(shell id -u):$(shell id -g) \
