@@ -56,3 +56,5 @@ RUN Rscript -e "devtools::install_github('timcdlucas/INLAutils')"
 
 RUN perl -pi -e  's/UID_MAX\s+60000/UID_MAX           9304017490/g' /etc/login.defs
 RUN perl -pi -e  's|GID_MAX\s+60000|GID_MAX           9304017490|g' /etc/login.defs
+
+#CMD ["/init"]
