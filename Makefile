@@ -36,6 +36,19 @@ build-r-package: clean pull-r-env ## Build the r package as tar ball
 				cd ../incidenceMapR && R CMD build . && \
 				cd ../modelServR && R CMD build ."
 
+test-build-r-env: ## test build docker container from scratch
+	TEST_CONTAINER_NAME ?= sfim-build-test:latest
+	docker rmi ${TEST_CONTAINER_NAME}
+	docker build -f Dockerfile.RBuildEnv . \
+		-t ${TEST_CONTAINER_NAME}
+	docker run -u $(shell id -u):$(shell id -g) \
+		-v $(PWD)/:/app \
+		-w /app $(TEST_CONTAINER_NAME) \
+		bash -c "cd dbViewR && R CMD build . && \
+				cd ../incidenceMapR && R CMD build . && \
+				cd ../modelServR && R CMD build ."
+	
+
 build-production: build-r-package get_version ## Builds the api
 	-mkdir -p api_service/models
 	docker-compose -f docker-compose.production.yml build

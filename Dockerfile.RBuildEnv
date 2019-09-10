@@ -1,4 +1,5 @@
-FROM rocker/rstudio:3.5.3
+# FROM rocker/rstudio:3.5.3
+FROM rocker/rstudio:3.6.1
 LABEL description="Environment to Package the Seattle Flu Models for Automated Builds"
 LABEL authors="ccollins@idmod.org"
 
