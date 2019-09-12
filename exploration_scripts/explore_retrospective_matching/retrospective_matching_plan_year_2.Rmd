@@ -220,7 +220,7 @@ Figure 1 shows p-values each week for the hypothesis that flu-negative and flu-p
 # plots of pvalues 
 grid.arrange(grobs=plotHolder[2:4],nrow=1)
 
-cap<-'Figure 1: p-values each week for the hypothesis that flu-negative and flu-positive residuals are drawn from different distributions. If the null of no difference is true, p-values will be uniformly distributed and 5% of them will be less than 0.05. Blue line shows an empirical smoothing to highlight any trends over time.'
+cap<-'Figure 1: p-values each week for the hypothesis that flu-negative and flu-positive residuals are drawn from different distributions. If the null of no difference is true, p-values will be uniformly distributed and 5% of them will be less than 0.05. Blue line shows an empirical smoothing to highlight any trends over time. (Note that Seattle Childrens\' race are all coded as "NULL".)'
 
 ```
 
@@ -230,7 +230,7 @@ cap<-'Figure 1: p-values each week for the hypothesis that flu-negative and flu-
 ggplot(pvals_srl) + geom_histogram(aes(x=p),breaks = seq(0,1,0.05)) +theme_bw() + scale_y_continuous(expand=c(0,0)) + scale_x_continuous(expand=c(0,0))
 # pretty much!  Heavy concetration at p=1 comes from cells with very small counts.
 
-cap<-'Figure 2: the distribution of p-values on Figure 1 is roughly uniform, except for excess at p=1 do to excess comparisons with very small counts.  This shows the data are consistent with the null hypothesis that sex, race, and residential location of residual specimens do not depend on flu test result.  (Note that Seattle Childrens\' race are all coded as "NULL".)'
+cap<-'Figure 2: the distribution of p-values on Figure 1 is roughly uniform, except for excess at p=1 do to excess comparisons with very small counts.  This shows the data are consistent with the null hypothesis that sex, race, and residential location of residual specimens do not depend on flu test result.  '
 
 ```
 
