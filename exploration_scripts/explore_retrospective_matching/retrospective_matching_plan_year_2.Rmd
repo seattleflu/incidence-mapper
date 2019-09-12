@@ -1,0 +1,281 @@
+---
+title: "Retrospective Matching Plan for Year 2 of the Seattle Flu Study"
+author: "Mike Famulare"
+date: "9/11/2019"
+output: 
+  html_document:
+    fig_caption: yes
+    fig_width: 11 
+    fig_height: 4
+  pdf_document: 
+    fig_caption: yes
+    fig_width: 8 
+    fig_height: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning = FALSE)
+# knitr::opts_chunk$set(cache=FALSE)
+knitr::opts_knit$set(eval.after = 'fig.cap')
+```
+
+## Executive Summary
+To reduce the burden on the diagnostic lab of flu-negative hospital residual samples, we will use the following strategy to downsample flu-negative residuals for further testing with TaqMan:
+
+1) Each week, each hospital lab partner will randomly sample as many flu-negative specimens as flu-positive specimens tested that week. 
+2) The partner hospitals will report to the SFS team the total number specimens that tested negative for flu that week, so that
+3) the SFS team can weight each collected sample in proportion to the total number of samples tested over the total collected each week from each hospital for downstream analysis. 
+
+This strategy is simple to implement and meets the needs of the SFS to define survey weights for the downsampled flu-negative specimens.  Using Year 1 data, we observed that the demographic factors associated with hospital residuals of sex, race, and residence location aggregated in ~650k person blocks (Census PUMAS) are statistically similar for flu-negative and flu-positive samples. Age distributions differed in ways consistent with flu vs. non-flu epidemiology.  Thus we expect the simple random downsampling strategy above to obtain flu-negatives that are adequately matched to flu-positives on demographic variables that are unlikely to correlate with disease, while not matching away variables like age for which we want to be able to learn about differences by disease. 
+
+# Introduction
+In year 1 of the Seattle Flu Study (SFS), we collected 10,829 residual respiratory swab samples from four regional hospitals--Harborview, UW Medical Center, Northwest Hospital, and Seattle Childrens--of which 2296 have been tested positive for influenza A or B via TaqMan array (as of Sept 11, 2019).  While the primary objective of the SFS is to learn how to interrupt influenza transmission, non-flu samples add a lot of value to the study because they (1) advance the cause of respiratory disease control awareness by allowing the SFS to serve all prospective participants who meet broad enrollment criteria, (2) provide flu-independent information about the various sampling frames of the study that are important for normalizing incidence in different collection route catchments, and (3) provide additional independent information to measure both flu vaccine effiacy and the effectiveness of non-specific interventions. For these reasons, we want to maintain high resolution tracking of non-flu pathogens as part of the SFS. 
+
+However, the large volume of flu-negative hospital residual samples constitutes a heavy burden on the diagnostic lab, and so in Year 2, we will only process equal numbers of flu-positive and flu-negative samples to reduce that burden.  As this strategy requires us to subsample the flu-negative residuals, we will implement the following sampling strategy for Year 2:
+
+1) Each week, each hospital lab partner will randomly sample as many flu-negative specimens as flu-positive specimens tested that week. 
+2) The partner hospitals will report to the SFS team the total number specimens that tested negative for flu that week, so that
+3) the SFS team can weight each collected sample in proportion to the total number of samples tested over the total collected each week from each hospital for downstream analysis. 
+
+# Sampling hypothesis and validation on Year 1 data
+
+We use the following approach to assess the validity of this strategy with year 1 data. Incidence and prevalance mapping is a *survey design problem*--among people with common exposure and recruitment attributes, how many and what fraction of them have flu, given our sample?  To estimate answers those questions across the whole population under study, we want to be able to control for differences in sampling and exposure between flu-positive and flu-negative people that are not causally-related to susceptibility and disease presentation, while not controlling away attributes that are causally-related to disease. 
+
+For the retrospective samples, we have four demographic variables--sex, race, residential location, and age--as well as two outcomes of interest--flu-positive or flu-negative. The hypothesis underlying the sampling strategy laid out above is that flu-negative and flu-positive populations should be identically distributed by sex, race, and residential location because we expect flu exposure to be statistically independent of those attributes when averaged over the entire season and region.  In other words, while we are studying the microstructure of seasonal flu transmission *within the season*, we assume that cumulative exposure over the course of the season is approximately well-mixed. As a survey design problem and not a relative risk problem, we should not deliberately match on age, as age-distribution differences between flu-positive and flu-negative ARI cases are an expected part of the epidemiology that we want to be able to observe.
+
+The document below shows that Year 1 data obeys the hypotheses in the previous paragraph.  The data are compatible with the null hypothesis that there are no differences between flu-negative and flu-positive test recipients by sex, race, and residential location.  And age differences follow expected epidemiological patterns--they are strongest in children and during peak flu. 
+
+
+```{r data, include = FALSE}
+# science up front
+
+library(dbViewR)  # requires .pgpass credentials from seattleflu/ID3C team
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(viridis)
+library(gridExtra)
+library(grid)
+
+
+### select retrospective data at puma scale
+  shp <- masterSpatialDB(shape_level = 'census_tract', source = 'wa_geojson')
+  
+  queryIn <- list(
+    SELECT = list(COLUMN = '*')
+  )
+  
+  db <- selectFromDB(queryIn)
+  
+  db$observedData$residence_puma <- as.character(shp$residence_puma[match(db$observedData$residence_census_tract,shp$residence_census_tract)])
+  
+  
+  fluABtestPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan')
+  
+  names(db$observedData)
+  
+  dat <- db$observedData %>% mutate(flu_positive =(pathogen %in% fluABtestPathogens)) %>%
+    filter(site_type %in% c('retrospective')) %>% filter(site != 'Unknown') %>% distinct(sample,.keep_all = TRUE) %>%
+    filter(!is.na(residence_puma))
+  dups <- intersect(dat$sample[dat$flu_positive],dat$sample[!dat$flu_positive])  
+  dat <- dat[dat$flu_positive | !(dat$sample %in% dups), ]
+  
+```
+
+```{r explore data, include=FALSE}
+##############################################################################################
+#### data exploration of demographic marginal distributions for flu-positives vs flu-negatives
+############################################################################################## 
+# we are looking to see if the demographic details of flu-negs and flu-pos are similar, 
+# so that we can use simple sampling.   If any are different, we need to figure out why, 
+# and if they should be different (like age-dependence of different diseases) or should not
+# like sex. 
+    
+# marginal distributions each week.
+  
+factors = c('age_range_fine_upper','sex','race','residence_puma') # dropped: hispanic_or_latino, flu_shot
+
+datPlotHolder<-list()
+for(FACTOR in factors){
+  
+  # FACTOR='sex'
+  # FACTOR='age_range_fine_upper'
+  # FACTOR='residence_puma'
+  # FACTOR='race'
+  
+  plotDat <- dat %>%
+    group_by_('site','flu_positive','encountered_week',FACTOR) %>%  
+    summarize(n=n()) %>% group_by_('site','flu_positive',FACTOR) %>% mutate(demog_frac = n/sum(n)) %>%
+    arrange_('encountered_week','flu_positive','site',FACTOR)
+  
+  plotDat <- plotDat %>% group_by_('site','encountered_week','flu_positive') %>%
+    mutate(mean_factor = n/sum(n))
+  
+  
+  datPlotHolder[[FACTOR]]<-ggplot(plotDat) + geom_line(aes_string(x='encountered_week',y='demog_frac',group='flu_positive',color='flu_positive')) +
+      facet_grid(as.formula(paste('site ~',FACTOR))) +
+      theme(axis.text.x = element_text(angle = 90))+ ggtitle(FACTOR) +
+    theme_bw() + scale_y_continuous(expand=c(0,0))
+  
+}
+```
+
+```{r pvalues, include = FALSE}
+###########################################################################################
+## Manhattan plots: p values of two-sided tests comparing distirbutions.
+## how frequently are the flu- and flu+ each week significantly different?
+## expected answer under null of no differences in p<0.05 happens less than 5% of the time
+  
+pvals <- expand.grid(site=unique(dat$site), 
+                     encountered_week = sort(unique(dat$encountered_week)),
+                     factor=factors)
+  
+plotHolder=list()
+
+for(FACTOR in factors){
+    
+  if(FACTOR == 'sex'){ # sex fisher test
+    
+    plotDat <- dat %>%
+      group_by_('site','flu_positive','encountered_week',FACTOR) %>%  
+      summarize(n=n()) %>% group_by(site,flu_positive) %>% mutate(demog_frac = n/sum(n)) %>%
+      arrange_('encountered_week','flu_positive','site',FACTOR)
+    
+    for(k in which(pvals$factor==FACTOR)){
+      vec <- c(
+        plotDat$n[plotDat$site == pvals$site[k] &
+                    plotDat$encountered_week == pvals$encountered_week[k] & 
+                    plotDat$flu_positive == TRUE & 
+                    plotDat$sex ==  'male' ],
+        plotDat$n[plotDat$site == pvals$site[k] &
+                    plotDat$encountered_week == pvals$encountered_week[k] & 
+                    plotDat$flu_positive == FALSE & 
+                    plotDat$sex ==  'male'],
+        plotDat$n[plotDat$site == pvals$site[k] &
+                    plotDat$encountered_week == pvals$encountered_week[k] & 
+                    plotDat$flu_positive == TRUE & 
+                    plotDat$sex ==  'female' ],
+        plotDat$n[plotDat$site == pvals$site[k] &
+                    plotDat$encountered_week == pvals$encountered_week[k] & 
+                    plotDat$flu_positive == FALSE & 
+                    plotDat$sex ==  'female']
+      )
+      
+      if(length(vec)==4){
+        tbl <- matrix(vec, ncol=2, byrow=TRUE)
+        pvals$p[k]<-fisher.test(tbl,alternative="two.sided")$p.value
+      } else {
+        pvals$p[k]<-NaN
+      }
+      
+    }
+    
+  } else { #ks-test for everything else
+
+    for(k in which(pvals$factor==FACTOR)){
+      
+      x<-as.numeric(factor(dat[[FACTOR]][dat$site == pvals$site[k] &
+                                        dat$encountered_week == pvals$encountered_week[k] & 
+                                        dat$flu_positive == TRUE],levels=sort(unique(dat[[FACTOR]]))))
+      y<-as.numeric(factor(dat[[FACTOR]][dat$site == pvals$site[k] &
+                                        dat$encountered_week == pvals$encountered_week[k] & 
+                                        dat$flu_positive == FALSE],levels=sort(unique(dat[[FACTOR]]))))
+      x<-x[!is.na(x)]
+      y<-y[!is.na(y)]
+      
+      if(length(x)>0 & length(y)>0 ){
+        pvals$p[k]<-ks.test(x,y,alternative="two.sided")$p.value
+      } else {
+        pvals$p[k]<-NaN
+      }
+      
+    }
+    
+  }
+  plotHolder[[FACTOR]] <-
+    ggplot(pvals %>% filter(factor==FACTOR)) + 
+    geom_point(aes(x=encountered_week,y=p)) + facet_wrap('site') +
+    geom_hline(aes(yintercept=0.05),linetype='dashed') +
+    geom_smooth(aes(x=as.numeric(as.factor(encountered_week)),y=p), se=FALSE) +
+    ggtitle(FACTOR) + theme_bw() + scale_y_continuous(expand=c(0,0)) +
+    theme(axis.text.x = element_text(angle = 90)) 
+  
+}
+
+excludeIdx <- pvals$factor =='age_range_fine_upper' |  # age should vary between flu and non-flu
+  (pvals$site=='RetrospectiveChildrensHospitalSeattle' & pvals$factor=='race') # exclude seattlechildrens because race is all NULL
+
+pvals_srl<-pvals[!excludeIdx, ]
+
+```
+
+
+# Sex, Race, Location
+
+Figure 1 shows p-values each week for the hypothesis that flu-negative and flu-positive residuals are drawn from different distributions. For sex, we tested the null of no difference with the two-sided Fisher's Exact test; for the others, we tested for difference in distributions with the two-sided Kolmogorov-Smirnoff test for two empirical distributions.  Simple random matching is a matched sampling strategy when the null is accepted.  When the null is true, p-values for repeated samples and tests should be approximately uniformly distributed (Figure 2) and approximately 5% of the tests should have p<0.05.  
+
+
+```{r demog pvalues, include=TRUE, fig.cap=cap, echo=FALSE, results="hide"}
+
+# plots of pvalues 
+grid.arrange(grobs=plotHolder[2:4],nrow=1)
+
+cap<-'Figure 1: p-values each week for the hypothesis that flu-negative and flu-positive residuals are drawn from different distributions. If the null of no difference is true, p-values will be uniformly distributed and 5% of them will be less than 0.05. Blue line shows an empirical smoothing to highlight any trends over time.'
+
+```
+
+```{r pvalue hist, include =TRUE, fig.cap=cap, results="hide", fig.width=5, fig.height=4, fig.align="center"}
+
+# histogram if null is true has asymptotic uniform distribution.
+ggplot(pvals_srl) + geom_histogram(aes(x=p),breaks = seq(0,1,0.05)) +theme_bw() + scale_y_continuous(expand=c(0,0)) + scale_x_continuous(expand=c(0,0))
+# pretty much!  Heavy concetration at p=1 comes from cells with very small counts.
+
+cap<-'Figure 2: the distribution of p-values on Figure 1 is roughly uniform, except for excess at p=1 do to excess comparisons with very small counts.  This shows the data are consistent with the null hypothesis that sex, race, and residential location of residual specimens do not depend on flu test result.  (Note that Seattle Childrens\' race are all coded as "NULL".)'
+
+```
+
+```{r summarize pvalues, include=TRUE, echo=TRUE}
+
+# if null is true, about 5% of p values should be less than 0.05
+mean(pvals_srl$p<0.05,na.rm=T)
+# yup!
+
+```
+Together, this ensemble of tests shows that the data are consistent with the null hypothesis that sex, race, and residential location are independent of flu-test status, and so we do not need a stratefied sampling strategy to balance demographics further.
+
+## Age
+
+Using the same logic above, we also looked at how age distributions vary by week.  Here, we see results inconsistent with the null hypothesis of no difference between flu-positive and flu-negative residuals.  The discrepancy is largest at Seattle Childrens' and tend to be lower during the flu peaks.  This is expected, as the age-distributions are known to vary by pathogen. 
+
+```{r age pvalues, include=TRUE, fig.cap=cap, results='hide', fig.width=5, fig.height=4, fig.align='center'}
+
+# plots of pvalues 
+plotHolder[1]
+
+cap<-'Figure 3 shows the p-values each week for the hypothesis that flu-negative and flu-positive residuals are drawn from different age distributions. Unlike the previous figures, age violates the null, most strongly in at Seattle Childrens\' and during peak flu, as expected.  '
+
+```
+
+```{r age pvalue hist, include =TRUE, fig.cap=cap, results="hide", fig.width=5, fig.height=4, fig.align="center"}
+
+# histogram if null is true has asymptotic uniform distribution.
+ggplot(pvals[pvals$factor=='age_range_fine_upper',]) + geom_histogram(aes(x=p),breaks = seq(0,1,0.05)) +theme_bw() + scale_y_continuous(expand=c(0,0)) + scale_x_continuous(expand=c(0,0))
+# pretty much!  Heavy concetration at p=1 comes from cells with very small counts.
+
+cap<-'Figure 4: the distribution of p-values on Figure 3 has an excess of p<0.05, suggesting that age distributions really are different between flu-negative and flu-positive samples, as expected.'
+
+```
+
+```{r age pvals, include=TRUE, echo=TRUE}
+mean(pvals$p[pvals$factor =='age_range_fine_upper' ]<0.05,na.rm=T)
+# excess of p<0.05 suggests real differences between flu-positive and flu-negative by age
+```
+
+# Conclusion
+
+Based on Year 1 data, within each week, the data are statistically consistent with the hypothesis that all hospital residuals are drawn from the same demographic distributions of sex, race, and residential location, regardless of flu test outcome.  These constitute the main variables that represent the catchment of each hospital. As there are no consistent biases between flu-positive and flu-negative residuals along these variables, we do not need to design a stratified sampling frame within each week.  
+
+The one demographic variable available to us that differed by flu test result is age. Age differs in ways consistent with the epidemiology of flu vs generalized acute respiratory infection--flu is most common in hospitalized younger children and age distributions each week were most different during peak flu season.  *These are expected differences that we do not want to control for with matching*. 
+
+While the ensemble of hypothesis tests by week for differences in sex, race, and residential location are consistent with the null hypothesis of no differences in distribution between flu-positive and flu-negative residuals, within each factor, residential location showed some evidence of systematic differences at Harborview and Seattle Chilrens'.  If these differences are real and not purely chance (which, again, they are consistent with), they may represent some differences in care-seeking behavior by location at the regional center hospitals.  We do not have the symptom data for residuals to test if possible differences depend on severity, so we cannot rule out this small bias. 
+

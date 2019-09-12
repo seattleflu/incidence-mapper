@@ -26,9 +26,11 @@ library(grid)
   names(db$observedData)
   
   dat <- db$observedData %>% mutate(flu_positive =(pathogen %in% fluABtestPathogens)) %>%
-    filter(site_type %in% c('retrospective')) %>% filter(site != 'Unknown') %>% distinct(sample,.keep_all = TRUE) %>%
+    filter(site_type %in% c('retrospective')) %>% filter(site != 'Unknown') %>% distinct(sample, flu_positive,.keep_all = TRUE) %>%
     filter(!is.na(residence_puma))
-
+  dups <- intersect(dat$sample[dat$flu_positive],dat$sample[!dat$flu_positive])  
+  dat <- dat[dat$flu_positive | !(dat$sample %in% dups), ]
+    
 ##############################################################################################
 #### data exploration of demographic marginal distributions for flu-positives vs flu-negatives
 ############################################################################################## 
@@ -39,8 +41,9 @@ library(grid)
     
 # marginal distributions each week.
   
-factors = c('age_range_fine_upper','residence_puma','sex','race') # dropped: hispanic_or_latino, flu_shot
+factors = c('age_range_fine_upper','sex','race','residence_puma') # dropped: hispanic_or_latino, flu_shot
 
+datPlotHolder<-list()
 for(FACTOR in factors){
   
   # FACTOR='sex'
@@ -57,11 +60,14 @@ for(FACTOR in factors){
     mutate(mean_factor = n/sum(n))
   
   
-  p<-ggplot(plotDat) + geom_line(aes_string(x='encountered_week',y='demog_frac',group='flu_positive',color='flu_positive')) +
+  datPlotHolder[[FACTOR]]<-ggplot(plotDat) + geom_line(aes_string(x='encountered_week',y='demog_frac',group='flu_positive',color='flu_positive')) +
       facet_grid(as.formula(paste('site ~',FACTOR))) +
-      theme(axis.text.x = element_text(angle = 90))
-  print(p)
+      theme(axis.text.x = element_text(angle = 90))+ ggtitle(FACTOR) +
+    theme_bw() + scale_y_continuous(expand=c(0,0))
+  
 }
+
+for(k in 1:length(factor)){ print(datPlotHolder[k])}
   
 # visually, flu- and flu+ look a bit different. how significant is this, given noise, and what might real differences mean?
   
