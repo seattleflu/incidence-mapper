@@ -45,6 +45,7 @@ RUN Rscript -e "install.packages(c('logging'))"
 RUN Rscript -e "install.packages('INLA', repos=c(getOption('repos'), INLA='https://inla.r-inla-download.org/R/stable'), dep=TRUE)"
 RUN Rscript -e "install.packages(c('tidycensus'))"
 RUN Rscript -e "devtools::install_github('timcdlucas/INLAutils')"
+RUN Rscript -e "install.packages(c('testthat'))"
 
 
 
