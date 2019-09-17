@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y \
     # cleanup apt cache to reduce final image size
     rm -rf /var/lib/apt/lists/*
 
+# install JABGS 
+RUN apt-get update && apt-get install jags -y 
 
 # Set default make to parallel build
 ENV MAKE="make -j8"
@@ -45,8 +47,9 @@ RUN Rscript -e "install.packages(c('logging'))"
 RUN Rscript -e "install.packages('INLA', repos=c(getOption('repos'), INLA='https://inla.r-inla-download.org/R/stable'), dep=TRUE)"
 RUN Rscript -e "install.packages(c('tidycensus'))"
 RUN Rscript -e "devtools::install_github('timcdlucas/INLAutils')"
-RUN Rscript -e "install.packages(c('testthat'))"
-
+RUN Rscript -e "install.packages('testthat')"
+# RUN Rscript -e "install.packages('R2jags')"
+RUN Rscript -e "install.packages('unitizer')"
 
 
 # Our Organization(as others do) map Active Directory to LDAP for linux

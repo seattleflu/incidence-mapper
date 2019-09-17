@@ -1,6 +1,12 @@
 library(testthat)
 
 
+library('dbViewR')
+library('incidenceMapR')
+library('modelVisualizeR')
+library('modelServR')
+
+
 context("local packages content")
 
 test_that("package:dbViewR content", {
