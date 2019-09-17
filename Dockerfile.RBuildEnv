@@ -7,7 +7,6 @@ LABEL authors="ccollins@idmod.org"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
 
-
 # install packages required and then cleanup
 RUN apt-get update && apt-get install -y \
     # required by devtools and ggmap
@@ -22,6 +21,10 @@ RUN apt-get update && apt-get install -y \
     git-core git libgit2-dev && \
     # cleanup apt cache to reduce final image size
     rm -rf /var/lib/apt/lists/*
+
+# Update apt sources
+RUN echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
+RUN apt-get -t buster install libc6 -y
 
 # install JABGS 
 RUN apt-get update && apt-get install jags -y 
