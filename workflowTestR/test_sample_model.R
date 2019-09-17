@@ -1,9 +1,5 @@
-library(testthat)
 library('dbViewR')
 library('incidenceMapR')
-
-context("test sample model")
-
 
 ## simulated data with bing query search data, run fixed effects model
 queryIn <- list(
