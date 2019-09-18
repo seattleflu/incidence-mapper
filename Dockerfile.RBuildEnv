@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
 
 # Update apt sources
 RUN echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
+RUN apt-get update -y
 RUN apt-get -t buster install libc6 -y
 
 # install JABGS 
