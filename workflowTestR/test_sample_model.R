@@ -12,5 +12,21 @@ queryIn <- list(
 db <- expandDB( selectFromDB(  queryIn,  source = 'simulated_data' ) )
 shp <- masterSpatialDB(shape_level = 'census_tract', source = 'simulated_data', rm_files = TRUE)
 
-modelDefinition <- smoothModel(db=db, shp=shp)
-model <- modelTrainR(modelDefinition)
+mycompare <- function(target, current) { all.equal(target, current, tolerance = 1e-3)}
+
+
+unitizer_sect("modelDefinition Test", compare=testFuns(
+  value=mycompare, conditions=mycompare, output=function(x,y) TRUE, 
+  message=function(x,y) TRUE, aborted=function(x,y) TRUE), 
+              {
+                (modelDefinition <- smoothModel(db=db, shp=shp))
+              })
+
+unitizer_sect("modelDefinition Test", compare=testFuns(
+  value=mycompare, conditions=mycompare, output=function(x,y) TRUE, 
+  message=function(x,y) TRUE, aborted=function(x,y) TRUE), 
+              {
+                (model <- modelTrainR(modelDefinition))
+              })
+
+
