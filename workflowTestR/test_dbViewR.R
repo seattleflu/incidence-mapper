@@ -1,5 +1,5 @@
 library(testthat)
-
+library('dbViewR')
 
 context("test dbViewR packages")
 
