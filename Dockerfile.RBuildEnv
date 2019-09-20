@@ -27,8 +27,8 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
 ARG WORKERS=8
 ENV MAKE="make -j${WORKERS}"
 
-RUN Rscript -e "install.packages(c('ps', 'R6', 'cli', 'crayon', 'desc', 'prettyunits', 'gh', 'rprojroot', 'withr', 'mime', 'openssl', 'Rcpp', 'jsonlite', 'rstudioapi', 'digest', 'memoise','clisymbols', 'sessioninfo','glue', 'rcmdcheck'))"
-RUN Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/rlang/rlang_0.3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+RUN Rscript -e "install.packages(c('ps', 'R6', 'cli', 'crayon', 'desc', 'prettyunits', 'gh', 'rprojroot', 'withr', 'mime', 'openssl', 'Rcpp', 'jsonlite', 'rstudioapi', 'digest', 'memoise','clisymbols', 'sessioninfo','glue', 'rcmdcheck'))" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/rlang/rlang_0.3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/curl/curl_3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/whisker/whisker_0.3-2.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/fs/fs_1.2.7.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
@@ -41,8 +41,8 @@ RUN Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/callr/callr_3.2.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/pkgbuild/pkgbuild_1.0.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/pkgload/pkgload_1.0.1.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
-    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/devtools/devtools_2.0.2.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
-    Rscript -e "devtools::install_version('DBI', version = '1.0.0')" && \
+RUN Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/devtools/devtools_2.0.2.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+RUN Rscript -e "devtools::install_version('DBI', version = '1.0.0')"
     Rscript -e "devtools::install_version('dplyr', version = '0.8.0.1')" && \
     Rscript -e "devtools::install_version('geojsonio', version = '0.6.0')" && \
     Rscript -e "devtools::install_version('ggmap', version = '3.0.0')" && \
