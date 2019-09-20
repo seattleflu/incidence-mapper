@@ -28,7 +28,7 @@ ARG WORKERS=8
 ENV MAKE="make -j${WORKERS}"
 
 RUN Rscript -e "install.packages(c('ps', 'R6', 'cli', 'crayon', 'desc', 'prettyunits', 'gh', 'rprojroot', 'withr', 'mime', 'openssl', 'Rcpp', 'jsonlite', 'rstudioapi', 'digest', 'memoise','clisymbols', 'sessioninfo','glue', 'rcmdcheck'))" && \
-    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/rlang/rlang_0.3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/rlang/rlang_0.3.4.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/curl/curl_3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/whisker/whisker_0.3-2.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/fs/fs_1.2.7.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
