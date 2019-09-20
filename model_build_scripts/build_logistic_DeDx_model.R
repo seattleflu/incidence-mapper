@@ -37,7 +37,42 @@ for (SOURCE in names(geoLevels)){
     )
     
     db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp )
-  
+    
+    # right now, self-test is missing age and residence data, and publicSpace is missing age data.
+    # This is a database issue that will be fixed, so this is hack to fill them in for prediction. 
+    
+    fill_site_types <- c('publicSpace','self-test')
+    for( FILL in setdiff(fill_site_types,unique(db$observedData$site_type)) ){
+      if (GEO == 'residence_neighborhood_district_name'){
+        fillDat <- expand.grid(encountered_week=sort(unique(db$observedData$encountered_week)),
+                               residence_neighborhood_district_name=sort(unique(db$observedData$residence_neighborhood_district_name)),
+                               site_type=FILL,
+                               age_range_fine_upper = sort(unique(db$observedData$age_range_fine_upper)),
+                               pathogen = sort(unique(db$observedData$pathogen)),
+                               n=0,
+                               positive=NA)
+      } else if (GEO=='residence_puma'){
+        fillDat <- expand.grid(encountered_week=sort(unique(db$observedData$encountered_week)),
+                               residence_puma=sort(unique(db$observedData$residence_puma)),
+                               site_type=FILL,
+                               age_range_fine_upper = sort(unique(db$observedData$age_range_fine_upper)),
+                               pathogen = sort(unique(db$observedData$pathogen)),
+                               n=0,
+                               positive=NA)
+      } else if (GEO=='residence_census_tract'){
+        fillDat <- expand.grid(encountered_week=sort(unique(db$observedData$encountered_week)),
+                               residence_census_tract=sort(unique(db$observedData$residence_census_tract)),
+                               site_type=FILL,
+                               age_range_fine_upper = sort(unique(db$observedData$age_range_fine_upper)),
+                               pathogen = sort(unique(db$observedData$pathogen)),
+                               n=0,
+                               positive=NA)
+      }
+      fillDat$time_row <- match(fillDat$encountered_week, sort(unique(db$observedData$encountered_week)))
+      fillDat$age_row <- match(fillDat$age_range_fine_upper, sort(unique(db$observedData$age_range_fine_upper)))
+      
+      db$observedData <- rbind(db$observedData,fillDat)
+    }
       
     # training occassionaly segfaults on but it does not appear to be deterministic...
     tries <- 0
@@ -65,7 +100,7 @@ for (SOURCE in names(geoLevels)){
             png(filename = fname,width = 6, height = 5, units = "in", res = 300)
             print(
               ggplot(model$modeledData %>% filter(site_type == SITE)) +
-                    geom_line(aes_string(x='encountered_week',y="modeled_fraction_mode", group=GEO,color=GEO)) +
+                    geom_line(aes_string(x='encountered_week',y="modeled_fraction_median", group=GEO,color=GEO)) +
                     facet_wrap('age_range_fine_upper') +
                     # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_fraction_lower_95_CI", ymax="modeled_fraction_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                     guides(color=FALSE) +

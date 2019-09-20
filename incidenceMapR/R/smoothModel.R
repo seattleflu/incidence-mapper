@@ -45,7 +45,7 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   hyper$site_time <- list(prec = list( prior = "pc.prec", param = 1e-2, alpha = 0.01))
-  hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
+  hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   
   # we smooth across factor levels with random effects replicates: http://www.r-inla.org/models/tools#TOC-Models-with-more-than-one-type-of-likelihood
   validFactorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('pathogen','n','positive')) | 
