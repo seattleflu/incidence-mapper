@@ -106,6 +106,10 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
     db$pathogen[idx] <- 'not_yet_tested'
     db$present[idx] <- TRUE
     
+    # drop present column if all TRUE
+    if(all(db$present==TRUE)){
+      db <- db %>% select(-present)
+    }
     
     DBI::dbDisconnect(rawData)
 
@@ -119,7 +123,37 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   # this logic will probably move to sql queries in the database instead of dplyr after....
     if(queryList$SELECT !="*"){
       
+      # combine PCR targets that describe one pathogen family
+      db$pathogen[db$pathogen %in% c('AdV_1of2','AdV_2of2') ] <- 'AdV'
+      db$pathogen[db$pathogen %in% c('RV_1of2','RV_2of2') ] <- 'RV'
+      db$pathogen[db$pathogen %in% c('AP324NU') ] <- 'Flu_C_pan'
+      db$pathogen[db$pathogen %in% c('hPIV1','hPIV2','hPIV1_hPIV2','hPIV3','hPIV4','hPIV3_hPIV4') ] <- 'hPIV'
+      db$pathogen[db$pathogen %in% c('CoV_229E_CoV_OC43','CoV_HKU1_CoV_NL63','CoV_OC43','CoV_229E','CoV_HKU1','CoV_NL63') ] <- 'CoV'
+      db$pathogen[db$pathogen %in% c('S. pneumoniae_APZTD4A') ] <- 'S.pneumoniae'
+      db$pathogen[db$pathogen %in% c('M. pneumoniae_AI5IRK5') ] <- 'M.pneumoniae'
+      db$pathogen[db$pathogen %in% c('C. pneumoniae_AI1RW2H') ] <- 'C.pneumoniae'
+      db$pathogen[db$pathogen %in% c('EnterovirusA_B 1_AP7DPVF') ] <- 'EV_pan'
       
+      
+      # filter out nested PCR targets to retain high-level target only
+      # Flu A
+        keepTargetList <- unique(db$sample[db$pathogen %in% c("Flu_A_H1","Flu_A_H3")])
+        dropTargetList <- unique(db$sample[db$pathogen %in% c("Flu_A_pan")])
+        
+        dropSampleList <- intersect(dropTargetList,keepTargetList)
+        
+        db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("Flu_A_pan")))
+        
+      # enterovirus
+        keepTargetList <- unique(db$sample[db$pathogen %in% c("EV_D68")])
+        dropTargetList <- unique(db$sample[db$pathogen %in% c("EV_pan")])
+        
+        dropSampleList <- intersect(dropTargetList,keepTargetList)
+        
+        db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("EV_pan")))
+        
+        
+
 
       #(Needed hack until higher-level shape labels are in database)
         if ( any( grepl('residence',queryList$SELECT$COLUMN) | grepl('work',queryList$SELECT$COLUMN) ) ){
@@ -187,6 +221,8 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
         if(!('pathogen' %in% queryList$GROUP_BY$COLUMN)){
           if( 'pathogen' %in% queryList$WHERE$COLUMN){
             db$pathogen <- paste(queryList$WHERE$IN['pathogen' %in% queryList$WHERE$COLUMN],collapse='-')
+          } else if ('pathogen' %in% queryList$SUMMARIZE$COLUMN) {
+            db$pathogen <- paste(queryList$SUMMARIZE$IN['pathogen' %in% queryList$SUMMARIZE$COLUMN],collapse='-')
           } else {
             db$pathogen<-'all' 
           }
