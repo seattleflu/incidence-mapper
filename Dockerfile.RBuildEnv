@@ -32,7 +32,7 @@ RUN Rscript -e "install.packages(c('ps', 'R6', 'cli', 'crayon', 'desc', 'prettyu
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/curl/curl_3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/whisker/whisker_0.3-2.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/fs/fs_1.2.7.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
-    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/clipr/clipr_0.5.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/clipr/clipr_0.6.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/git2r/git2r_0.24.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/usethis/usethis_1.4.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
     Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/httr/httr_1.4.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
@@ -52,12 +52,9 @@ RUN Rscript -e "devtools::install_version('DBI', version = '1.0.0')" && \
     Rscript -e "devtools::install_version('lubridate', version = '1.7.4')" && \
     Rscript -e "devtools::install_version('magrittr', version = '1.5')" && \
     Rscript -e "devtools::install_version('RCurl', version = '1.95-4.12')" && \
-    Rscript -e "devtools::install_version('rgdal', version = '1.4-3')" && \
-    Rscript -e "devtools::install_version('rgeos', version = '0.4-2')" && \
     Rscript -e "devtools::install_version('rmarkdown', version = '1.12')" && \
     Rscript -e "devtools::install_version('roxygen2', version = '6.1.1')" && \
     Rscript -e "devtools::install_version('RPostgres', version = '1.1.1')" && \
-    Rscript -e "devtools::install_version('sf', version = '0.7-3')" && \
     Rscript -e "devtools::install_version('spdep', version = '1.0-2')" && \
     Rscript -e "devtools::install_version('tidycensus', version = '0.9')" && \
     Rscript -e "devtools::install_version('tidyr', version = '0.8.3')" && \
