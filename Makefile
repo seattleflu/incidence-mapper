@@ -15,6 +15,10 @@ build-r-env: ## build docker container that can package R scripts
 	docker build -f Dockerfile.RBuildEnv . \
 		-t $(BUILD_CONTAINER_NAME)
 
+build-r-env-lite:
+	docker build --build-arg WORKERS=2 -f Dockerfile.RBuildEnv . \
+		-t $(BUILD_CONTAINER_NAME)
+
 publish-r-env: build-r-env ## Publish our R Environment
 	docker push $(BUILD_CONTAINER_NAME)
 

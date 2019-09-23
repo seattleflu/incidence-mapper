@@ -1,5 +1,5 @@
-# FROM rocker/rstudio:3.5.3
-FROM rocker/rstudio:3.6.1
+FROM rocker/rstudio:3.5.3
+# FROM rocker/rstudio:3.6.1
 LABEL description="Environment to Package the Seattle Flu Models for Automated Builds"
 LABEL authors="ccollins@idmod.org"
 
@@ -8,13 +8,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
 
 # install packages required and then cleanup
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     # required by devtools and ggmap
     libssl-dev libcurl4-gnutls-dev \
     # required by sf
     libudunits2-dev libgdal-dev \
     # required by INLA or a dependency of INLA
-    libxml2-dev libx11-dev texlive-binaries libglu1-mesa-dev libfreetype6-dev \
+    libxml2-dev libx11-dev texlive-binaries libglu1-mesa-dev libfreetype6-dev libgit2-dev \
     # required by geojsonio or a dependency of geojsonio
     libgdal-dev libgeos-c1v5 libproj-dev libv8-dev libjq-dev libprotobuf-dev protobuf-compiler \
     # Git for development tools
@@ -28,28 +28,43 @@ RUN apt-get update -y
 RUN apt-get -t buster install libc6 -y
 
 # install JABGS 
-RUN apt-get update && apt-get install jags -y 
+# RUN apt-get update && apt-get install jags -y 
 
 # Set default make to parallel build
-ENV MAKE="make -j8"
-RUN Rscript -e "install.packages(c('magrittr', 'knitr', 'sp'))"
-RUN Rscript -e "install.packages(c('tidyr','lubridate'))"
-RUN Rscript -e "install.packages(c('dplyr'))"
-RUN Rscript -e "install.packages(c('rmarkdown'))"
-RUN Rscript -e "install.packages(c('ggplot2'))"
-RUN Rscript -e "install.packages(c('ggmap'))"
-RUN Rscript -e "install.packages(c('viridis'))"
-RUN Rscript -e "install.packages(c('sf'))"
-RUN Rscript -e "install.packages(c('jsonlite'))"
-RUN Rscript -e "install.packages(c('devtools'))"
-RUN Rscript -e "install.packages(c('roxygen2','RCurl'))"
-RUN Rscript -e "install.packages(c('DBI','RPostgres'))"
-RUN Rscript -e "install.packages(c('rgdal'), type='source')"
-RUN Rscript -e "install.packages(c('rgeos'), type='source')"
-RUN Rscript -e "install.packages(c('geojsonio'))"
-RUN Rscript -e "install.packages(c('logging'))"
-RUN Rscript -e "install.packages('INLA', repos=c(getOption('repos'), INLA='https://inla.r-inla-download.org/R/stable'), dep=TRUE)"
-RUN Rscript -e "install.packages(c('tidycensus'))"
+ARG WORKERS=8
+ENV MAKE="make -j${WORKERS}"
+
+RUN Rscript -e "install.packages(c('ps', 'R6', 'cli', 'crayon', 'desc', 'prettyunits', 'gh', 'rprojroot', 'withr', 'mime', 'openssl', 'Rcpp', 'jsonlite', 'pkgload', 'rstudioapi', 'digest', 'memoise','clisymbols', 'sessioninfo','glue', 'rcmdcheck'))" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/rlang/rlang_0.3.4.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/curl/curl_3.3.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/whisker/whisker_0.3-2.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/fs/fs_1.2.7.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/clipr/clipr_0.6.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/git2r/git2r_0.24.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/usethis/usethis_1.4.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/httr/httr_1.4.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/remotes/remotes_2.0.4.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/processx/processx_3.3.0.tar.gz', repos=NULL, type='source', dep=TRUE)" && \
+    Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/callr/callr_3.2.0.tar.gz', repos=NULL, type='source', dep=TRUE)"
+RUN Rscript -e "install.packages('https://cran.r-project.org/src/contrib/Archive/devtools/devtools_2.0.2.tar.gz', repos=NULL, type='source', dep=TRUE)"
+RUN Rscript -e "devtools::install_version('DBI', version = '1.0.0')" && \
+    Rscript -e "devtools::install_version('dplyr', version = '0.8.0.1')" && \
+    Rscript -e "devtools::install_version('geojsonio', version = '0.6.0')" && \
+    Rscript -e "devtools::install_version('ggmap', version = '3.0.0')" && \
+    Rscript -e "devtools::install_version('knitr', version = '1.22')" && \
+    Rscript -e "devtools::install_version('logging', version = '0.9-107')" && \
+    Rscript -e "devtools::install_version('lubridate', version = '1.7.4')" && \
+    Rscript -e "devtools::install_version('magrittr', version = '1.5')" && \
+    Rscript -e "devtools::install_version('RCurl', version = '1.95-4.12')" && \
+    Rscript -e "devtools::install_version('rmarkdown', version = '1.12')" && \
+    Rscript -e "devtools::install_version('roxygen2', version = '6.1.1')" && \
+    Rscript -e "devtools::install_version('RPostgres', version = '1.1.1')" && \
+    Rscript -e "devtools::install_version('spdep', version = '1.0-2')" && \
+    Rscript -e "devtools::install_version('tidycensus', version = '0.9')" && \
+    Rscript -e "devtools::install_version('viridis', version = '0.5.1')" && \
+    Rscript -e "devtools::install_version('shiny', version = '1.2.0')" && \
+    rm -rf /tmp/*
+RUN Rscript -e "install.packages('https://inla.r-inla-download.org/R/stable/src/contrib/INLA_18.07.12.tar.gz', repos=NULL, type='source', dep=TRUE)"
 RUN Rscript -e "devtools::install_github('timcdlucas/INLAutils')"
 RUN Rscript -e "install.packages('testthat')"
 # RUN Rscript -e "install.packages('R2jags')"
@@ -62,7 +77,6 @@ RUN Rscript -e "install.packages('unitizer')"
 # which remaps the rstudio UID,
 # the user ids can be large. To suppor that we need to update login.defs
 
-RUN perl -pi -e  's/UID_MAX\s+60000/UID_MAX           9304017490/g' /etc/login.defs
-RUN perl -pi -e  's|GID_MAX\s+60000|GID_MAX           9304017490|g' /etc/login.defs
-
+RUN perl -pi -e  's/UID_MAX\s+60000/UID_MAX           9304017490/g' /etc/login.defs && \
+    perl -pi -e  's|GID_MAX\s+60000|GID_MAX           9304017490|g' /etc/login.defs
 #CMD ["/init"]
