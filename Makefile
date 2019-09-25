@@ -1,5 +1,4 @@
 BUILD_CONTAINER_NAME ?= idm-docker-staging.packages.idmod.org/sfim-build-env:latest
-
 .PHONY= get_version build-r-env build-r-package build-api help
 
 help: ## This help.
