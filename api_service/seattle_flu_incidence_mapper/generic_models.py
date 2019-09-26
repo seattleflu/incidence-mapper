@@ -1,5 +1,6 @@
 # API Methods for the /pathogen_models calls
 import hashlib
+from typing import Tuple
 
 from seattle_flu_incidence_mapper.model_store import save_model_file, get_model_file
 from seattle_flu_incidence_mapper.models.generic_model import GenericModel, GenericModelSchema
@@ -28,9 +29,14 @@ def read(model_id):
     """
     This function responds to a request for /api/pathogen_models/{pathogen_model_id}
     with one matching pathogen_model from pathogen_models
-    :param model_id:   Id of pathogen_model to find
-    :return:            pathogen_model matching id
+
+    Args:
+        model_id: Id of pathogen_model to find
+
+    Returns: pathogen_model matching id
+
     """
+
     # Get the pathogen_model requested
     pathogen_model = GenericModel.query.filter(GenericModel.id == model_id).one_or_none()
 
@@ -54,9 +60,12 @@ def create():
     """
     This function creates a new pathogen_model in the pathogen_models structure
     based on the passed in pathogen_model data
-    :return:        201 on success, 406 on pathogen_model exists
-    """
 
+    Returns:
+        201 on success, 406 on pathogen_model exists
+    """
+    schema = None
+    new_model = None
     # if the item comes in as a single, let's [
     if type(request.form['name']) is str:
         new_model, schema = insert_one_model(form=request.form, files=request.files)
@@ -65,14 +74,26 @@ def create():
             new_model, schema = insert_one_model(form={k: request.form[k][i] for k in request.keys()},
                                                           files={k: request.form[k][i] for k in request.files.keys()})
     db.session.commit()
+    if schema and new_model:
 
-    # Serialize and return the newly created pathogen_model in the response
-    data = schema.dump(new_model).data
+        # Serialize and return the newly created pathogen_model in the response
+        data = schema.dump(new_model).data
 
-    return data, 201
+        return data, 201
+    return "Unknown error", 400
 
 
-def insert_one_model(form, files):
+def insert_one_model(form, files) -> Tuple[GenericModel, GenericModelSchema]:
+    """
+    Insert a model into the database
+
+    Args:
+        form: Dict representing the post form
+        files: Dict with files that were uploaded
+
+    Returns:
+        A GenericModel
+    """
     rds_key = None
     model_key = None
     if 'rds' in request.files:
@@ -80,7 +101,8 @@ def insert_one_model(form, files):
     if 'model' in request.files:
         model_key = hashlib.md5(files['model'].read()).hexdigest()
     model_id = get_model_id(form['query_str'])
-    # build our pathogenmodel object first
+
+    # build our pathogen model object first
     model = dict(id=model_id,
                  name=form['name'],
                  query_str=form['query_str'],
@@ -93,19 +115,20 @@ def insert_one_model(form, files):
     db.session.add(new_model)
 
     # save the files to our config directory
-    save_model_file(files['model'], f'{new_model.id}.csv')
-
-    if 'rds' in files:
-        save_model_file(files['model'], f'{rds_key}.RDS')
+    save_model_file(files['model'], f'{new_model.id}')
     return new_model, schema
 
 
 def update(pathogen_model_id, pathogen_model):
     """
     This function updates an existing pathogen_model in the pathogen_models structure
-    :param pathogen_model_id:   Id of the pathogen_model to update in the pathogen_models structure
-    :param pathogen_model:      pathogen_model to update
-    :return:            updated pathogen_model structure
+
+    Args:
+        pathogen_model_id: Id of the pathogen_model to update in the pathogen_models structure
+        pathogen_model: pathogen_model to update
+
+    Returns:
+        updated pathogen_model structure
     """
     # Get the pathogen_model requested from the db into session
     update_pathogen_model = GenericModel.query.filter(
@@ -142,8 +165,12 @@ def update(pathogen_model_id, pathogen_model):
 def delete(pathogen_model_id):
     """
     This function deletes a pathogen_model from the pathogen_models structure
-    :param pathogen_model_id:   Id of the pathogen_model to delete
-    :return:            200 on successful delete, 404 if not found
+
+    Args:
+        pathogen_model_id: Id of the pathogen_model to delete
+
+    Returns:
+        200 on successful delete, 404 if not found
     """
     # Get the pathogen_model requested
     pathogen_model = GenericModel.query.filter(GenericModel.id == pathogen_model_id).one_or_none()
@@ -164,24 +191,28 @@ def delete(pathogen_model_id):
 )
 
 
-def model_file(modelId):
+def model_file(model_id):
     """
     Returns the model file to the user
-    :param pathogen_model_id:
-    :return:
+
+    Args:
+        model_id: Send the model file for a specific model
+
+    Returns:
+        200 success with model contents if successful, 404 if the model cannot be found
     """
     # Get the pathogen_model requested from the db into session
     pathogen_model = GenericModel.query.filter(
-        GenericModel.id == modelId
+        GenericModel.id == model_id
     ).order_by(GenericModel.created.desc()).first()
 
     # Did we find a pathogen_model?
     if pathogen_model is not None:
         is_latent = request.args.get("latent", "0").lower() in ('1', 'y', 'yes', 't', 'true', True, 1)
-        return send_file(get_model_file(modelId))
+        return send_file(get_model_file(model_id))
     # Otherwise, nope, didn't find that pathogen_model
     else:
         abort(
             404,
-            "Pathogen Model not found for Id: {pathogen_model_id}".format(pathogen_model_id=modelId),
+            "Pathogen Model not found for Id: {pathogen_model_id}".format(pathogen_model_id=model_id),
         )
