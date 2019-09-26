@@ -118,43 +118,53 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
      print('unknown source database!')
   }
 
+ 
+  # combine PCR targets that describe one pathogen family
+  db$pathogen[db$pathogen %in% c('Adenovirus_pan_2','Adenovirus_pan_1','AdV_1of2','AdV_2of2') ] <- 'AdV'
+  db$pathogen[db$pathogen %in% c('12 Rhinovirus_pan_2','11 Rhinovirus_pan_1','RV_1of2','RV_2of2') ] <- 'RV'
+  db$pathogen[db$pathogen %in% c('Influenza_B','Flu_b_pan') ] <- 'Flu_B_pan'
+  db$pathogen[db$pathogen %in% c('flu_A_pan','Flu_a_pan') ] <- 'Flu_A_pan'
+  db$pathogen[db$pathogen %in% c('AP324NU') ] <- 'Flu_C_pan'
+  db$pathogen[db$pathogen %in% c('hPIV1','hPIV2','hPIV1_hPIV2','hPIV3','hPIV4','hPIV3_hPIV4') ] <- 'hPIV'
+  db$pathogen[db$pathogen %in% c('CoV_229E_CoV_OC43','CoV_HKU1_CoV_NL63','CoV_OC43','CoV_229E','CoV_HKU1','CoV_NL63') ] <- 'CoV'
+  db$pathogen[db$pathogen %in% c('APZTD4A','S. pneumoniae_APZTD4A') ] <- 'S.pneumoniae'
+  db$pathogen[db$pathogen %in% c('AI5IRK5','M. pneumoniae_AI5IRK5') ] <- 'M.pneumoniae'
+  db$pathogen[db$pathogen %in% c('C. pneumoniae_AI1RW2H') ] <- 'C.pneumoniae'
+  db$pathogen[db$pathogen %in% c('AP7DPVF','EnterovirusA_B 1_AP7DPVF') ] <- 'EV_pan'
+  db$pathogen[db$pathogen %in% c('Enterovirus-D_APFVK4U','enterovirus-D_APFVK4U') ] <- 'EV_D68'
+  db$pathogen[db$pathogen %in% c('AI20U8U') ] <- 'B.pertussis'
+  db$pathogen[db$pathogen %in% c('APKA3DE') ] <- 'Mumps'
+  
+  # filter out nested PCR targets to retain high-level target only
+  # Flu A
+  keepTargetList <- unique(db$sample[db$pathogen %in% c("Flu_A_H1","Flu_A_H3")])
+  dropTargetList <- unique(db$sample[db$pathogen %in% c("Flu_A_pan")])
+  
+  dropSampleList <- intersect(dropTargetList,keepTargetList)
+  
+  db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("Flu_A_pan")))
+  
+  # enterovirus
+  keepTargetList <- unique(db$sample[db$pathogen %in% c("EV_D68")])
+  dropTargetList <- unique(db$sample[db$pathogen %in% c("EV_pan")])
+  
+  dropSampleList <- intersect(dropTargetList,keepTargetList)
+  
+  db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("EV_pan")))
+  
+  # filter out controls
+  db <- db %>% filter( !(pathogen %in% c('Hs04930436_g1','Ac00010014_a1')))
+  
+  # format flu_shot NA
+  db$flu_shot[is.na(db$flu_shot)] <- 'unknown'
+  db$flu_shot <- tolower(db$flu_shot)
+  
   
   # run query
   # this logic will probably move to sql queries in the database instead of dplyr after....
     if(queryList$SELECT !="*"){
       
-      # combine PCR targets that describe one pathogen family
-      db$pathogen[db$pathogen %in% c('AdV_1of2','AdV_2of2') ] <- 'AdV'
-      db$pathogen[db$pathogen %in% c('RV_1of2','RV_2of2') ] <- 'RV'
-      db$pathogen[db$pathogen %in% c('AP324NU') ] <- 'Flu_C_pan'
-      db$pathogen[db$pathogen %in% c('hPIV1','hPIV2','hPIV1_hPIV2','hPIV3','hPIV4','hPIV3_hPIV4') ] <- 'hPIV'
-      db$pathogen[db$pathogen %in% c('CoV_229E_CoV_OC43','CoV_HKU1_CoV_NL63','CoV_OC43','CoV_229E','CoV_HKU1','CoV_NL63') ] <- 'CoV'
-      db$pathogen[db$pathogen %in% c('S. pneumoniae_APZTD4A') ] <- 'S.pneumoniae'
-      db$pathogen[db$pathogen %in% c('M. pneumoniae_AI5IRK5') ] <- 'M.pneumoniae'
-      db$pathogen[db$pathogen %in% c('C. pneumoniae_AI1RW2H') ] <- 'C.pneumoniae'
-      db$pathogen[db$pathogen %in% c('EnterovirusA_B 1_AP7DPVF') ] <- 'EV_pan'
-      
-      
-      # filter out nested PCR targets to retain high-level target only
-      # Flu A
-        keepTargetList <- unique(db$sample[db$pathogen %in% c("Flu_A_H1","Flu_A_H3")])
-        dropTargetList <- unique(db$sample[db$pathogen %in% c("Flu_A_pan")])
-        
-        dropSampleList <- intersect(dropTargetList,keepTargetList)
-        
-        db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("Flu_A_pan")))
-        
-      # enterovirus
-        keepTargetList <- unique(db$sample[db$pathogen %in% c("EV_D68")])
-        dropTargetList <- unique(db$sample[db$pathogen %in% c("EV_pan")])
-        
-        dropSampleList <- intersect(dropTargetList,keepTargetList)
-        
-        db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("EV_pan")))
-        
-        
-
-
+ 
       #(Needed hack until higher-level shape labels are in database)
         if ( any( grepl('residence',queryList$SELECT$COLUMN) | grepl('work',queryList$SELECT$COLUMN) ) ){
           if (! any( grepl('cra_name',queryList$SELECT$COLUMN) | grepl('neighbo',queryList$SELECT$COLUMN) ) ){
