@@ -51,8 +51,9 @@ for (SOURCE in names(geoLevels)){
       GEO='residence_puma'
       # GEO='residence_cra_name'
       # PATHOGEN='flu'
-      # PATHOGEN='all'
-      PATHOGEN='rsv'
+      PATHOGEN='all'
+      # PATHOGEN='rsv'
+      # PATHOGEN='other_non_flu'
       
       queryIn <- list(
         SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
@@ -74,14 +75,12 @@ for (SOURCE in names(geoLevels)){
         tryCatch(
           {
             
-            db <- appendCatchmentModel(db,shp=shp, source=SRC, na.rm=TRUE  )
-            
+            db <- appendCatchmentModel(db,shp=shp, source=SRC, na.rm=TRUE )
+
             modelDefinition <- latentFieldModel(db=db, shp=shp)
             model <- modelTrainR(modelDefinition)
             
             print(summary(model$inla))
-            
-            saveModel(model)
             
             dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
             fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'encountered_week',sep='-'),'.png',sep='')
@@ -89,12 +88,18 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$latentField) + 
                     geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) + 
-                    guides(color=FALSE) + 
+                    geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+                    guides(color=FALSE, fill=FALSE) + 
                     theme(axis.text.x = element_text(angle = 90, hjust = 1))
               )
             dev.off()
             
+            # ggplot(model$modeledData %>% filter(site_type %in% 'retrospective' & flu_shot=='false' & sex=='female')) + 
+            #   geom_line(aes_string(x='encountered_week',y="modeled_count_median", color=GEO,group =GEO)) + 
+            #   geom_ribbon(aes_string(x='encountered_week',ymin="modeled_count_lower_95_CI", ymax="modeled_count_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+            #   guides(color=FALSE, fill=FALSE) + 
+            #   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+            # 
             success<-1
             
           }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")}
