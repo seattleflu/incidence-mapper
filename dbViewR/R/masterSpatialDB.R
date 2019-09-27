@@ -89,9 +89,9 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
       shp$residence_neighborhood_district_name <- as.character(shp[[FIELDNAME]])
       shp$work_neighborhood_district_name <- as.character(shp[[FIELDNAME]])
     }
-    if (any(grepl('PUMA5CE',names(shp),ignore.case = TRUE))){
+    if (any(grepl('PUMA', NAME))){
       FIELDNAME <- names(shp)[grepl('GEOID',names(shp),ignore.case = TRUE) & !grepl('AFF',names(shp),ignore.case = TRUE)]
-      puma7 <- paste(substr(as.character(shp[[FIELDNAME]]),1,2),as.character(shp$PUMA5CE),sep='')
+      puma7 <- paste(substr(as.character(shp[[FIELDNAME]]),1,2),as.character(shp[[names(shp)[grepl('PUMA',names(shp))]]]),sep='')
       shp$residence_puma <- puma7
       shp$work_puma <- puma7
     }
@@ -100,10 +100,12 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
       shp$residence_city <- as.character(shp[[FIELDNAME]])
       shp$work_city <- as.character(shp[[FIELDNAME]])
     }
-    if (grepl('GEOID',NAME,ignore.case = TRUE) & !grepl('AFF',NAME,ignore.case = TRUE)){
+    if (grepl('GEOID',NAME,ignore.case = TRUE) & !grepl('AFF',NAME,ignore.case = TRUE) ){
       FIELDNAME <- names(shp)[grepl('GEOID',names(shp),ignore.case = TRUE) & !grepl('AFF',names(shp),ignore.case = TRUE)]
-      shp$residence_census_tract <- as.character(shp[[FIELDNAME]])
-      shp$work_census_tract <- as.character(shp[[FIELDNAME]])
+      if (all(sapply(as.character(shp[[FIELDNAME]]),nchar)==11)){
+        shp$residence_census_tract <- as.character(shp[[FIELDNAME]])
+        shp$work_census_tract <- as.character(shp[[FIELDNAME]])
+      }
     } 
   }
   
