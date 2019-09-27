@@ -91,7 +91,7 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
       mutate(number_pathogens_found = sum(present), number_pathogens_tested = n())
     
     # add in "undetected" pathogen for samples that were tested but had no detections
-    db3 <- db2 %>% group_by(sample) %>% filter(all(present == FALSE) &  all(number_pathogens_tested>0)) %>%
+    db3 <- db2 %>% group_by(sample,number_pathogens_found,number_pathogens_tested) %>% filter(all(present == FALSE) &  all(number_pathogens_tested>0)) %>%
       summarize(pathogen = 'undetected') %>% mutate(present=TRUE)
     
     # join undetecteds with positives
