@@ -27,11 +27,12 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   
   # identify intended family
   if(is.null(family)){
-    if (all(inputData$n == inputData$positive)){
+    idx <- !is.na(inputData$positive)
+    if (all(inputData$n[idx] == inputData$positive[idx])){
       family = 'poisson'
-    } else if (any(inputData$n > inputData$positive)){
+    } else if (any(inputData$n[idx] > inputData$positive[idx])){
       family = 'binomial'
-    } else if (any(inputData$n < inputData$positive)){
+    } else if (any(inputData$n[idx] < inputData$positive[idx])){
       return('n < positive !!!  invald db$observedData.')
     }
   }
@@ -39,9 +40,11 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # construct priors
   hyper=list()
   hyper$global <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/200, alpha = 0.01))
-  hyper$age <- list(prec = list( prior = "pc.prec", param = 1, alpha = 0.01))
-  hyper$time <- list(prec = list( prior = "pc.prec", param = 1/50, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/100, alpha = 0.01))
+  hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
+  hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   
 
   # unlike smoothing model, we only replicate latent fields across pathogens, but treat all other factors as fixed effects
@@ -85,7 +88,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
                                                                 grepl('age',names(db$observedData)) | 
                                                                 grepl('residence_',names(db$observedData)) | 
                                                                 grepl('work_',names(db$observedData)) |
-                                                                grepl('encounter',names(db$observedData))  )]
+                                                                grepl('encounter',names(db$observedData)) |
+                                                                grepl('site',names(db$observedData)) )]
   
   factorIdx <- names(db$observedData) %in% validFactorNames
   for(COLUMN in names(db$observedData)[factorIdx]){
@@ -102,7 +106,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       inputData$time_row_rw2 <- inputData$time_row
 
       formula <- update(formula,  ~ . + f(time_row_rw2, model='rw2', hyper=modelDefinition$hyper$time, replicate=replicateIdx) )
-      validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2','time_row_IID')
+      validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2')
     }
     
     if(COLUMN == 'age_row'){
@@ -110,7 +114,25 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       inputData$age_row_rw2 <- inputData$age_row
 
       formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
-      validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2','age_row_IID')
+      # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2') # age doesn't go into space-time latent field
+    }
+    
+    if(grepl('site',COLUMN)){
+      
+      # site intercept
+      inputData$site_row_iid <- match(inputData[[COLUMN]],unique(inputData[[COLUMN]]))
+      formula <- update(formula,  ~ . + f(site_row_iid, model='iid', hyper=modelDefinition$hyper$site_iid, replicate=replicateIdx))
+      
+      # site-age interaction
+      # sites do collect different ages because of who accesses each site.
+      if('age_row' %in% names(inputData)){
+        inputData$site_age_ageIdx <- inputData$age_row
+        inputData$site_age_siteIdx <- inputData$site_row_iid
+        
+        formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
+                                            group = site_age_ageIdx, control.group=list(model="rw1")))
+        # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
+      }
     }
     
     if(COLUMN %in% c('residence_puma')){
