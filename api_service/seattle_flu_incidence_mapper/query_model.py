@@ -21,7 +21,7 @@ def query():
     file_format = 'csv' if 'csv' in request.headers.get('accept', 'json').lower() else 'json'
 
     model_id = get_model_id(query_json)
-    model_path = os.path.join(current_app.config['WORKER_IMAGE'], model_id + '.' + file_format)
+    model_path = os.path.join(os.getenv('MODEL_STORE', '/model_store'), model_id + '.' + file_format)
 
     return send_file(model_path,
                      as_attachment=False,

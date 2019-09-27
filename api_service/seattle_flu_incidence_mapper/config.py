@@ -58,4 +58,3 @@ connex_app.add_error_handler(NoResultFound, sqlalchemy_error_handler)
 connex_app.add_error_handler(FileNotFoundError, file_not_found_handler)
 # Read the swagger.yml file to configure the endpoints
 connex_app.add_api("swagger.yml")
-

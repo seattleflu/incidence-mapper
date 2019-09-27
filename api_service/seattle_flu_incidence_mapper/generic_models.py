@@ -188,31 +188,4 @@ def delete(pathogen_model_id):
         abort(
             404,
             "Pathogen Model not found for Id: {pathogen_model_id}".format(pathogen_model_id=pathogen_model_id),
-)
-
-
-def model_file(model_id):
-    """
-    Returns the model file to the user
-
-    Args:
-        model_id: Send the model file for a specific model
-
-    Returns:
-        200 success with model contents if successful, 404 if the model cannot be found
-    """
-    # Get the pathogen_model requested from the db into session
-    pathogen_model = GenericModel.query.filter(
-        GenericModel.id == model_id
-    ).order_by(GenericModel.created.desc()).first()
-
-    # Did we find a pathogen_model?
-    if pathogen_model is not None:
-        is_latent = request.args.get("latent", "0").lower() in ('1', 'y', 'yes', 't', 'true', True, 1)
-        return send_file(get_model_file(model_id))
-    # Otherwise, nope, didn't find that pathogen_model
-    else:
-        abort(
-            404,
-            "Pathogen Model not found for Id: {pathogen_model_id}".format(pathogen_model_id=model_id),
         )

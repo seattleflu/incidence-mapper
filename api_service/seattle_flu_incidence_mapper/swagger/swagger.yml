@@ -228,40 +228,6 @@ paths:
           content: {}
       security:
       - jwt: ['upload']
-  /generic_models/{modelId}/model:
-    get:
-      tags:
-      - generic_model
-      summary: Find pathogen model file by ID
-      description: Returns a single pathogen model file
-      operationId: seattle_flu_incidence_mapper.generic_models.model_file
-      parameters:
-      - name: modelId
-        in: path
-        description: ID of Pathogen Model to return
-        required: true
-        schema:
-          type: string
-      - name: latent
-        in: query
-        description: Return the latent verion of model file
-        schema:
-          type: boolean
-          default: false
-      responses:
-        200:
-          description: successful operation
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-        400:
-          description: Invalid ID supplied
-          content: {}
-        404:
-          description: PathogenModel not found
-          content: {}
 components:
   securitySchemes:
     jwt:
