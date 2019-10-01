@@ -247,6 +247,10 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
       db[[COLUMN]] <- as.character(db[[COLUMN]])
     }
 
+    if('encountered_week' %in% names(db)){
+      db$encountered_week <- factor(db$encountered_week, levels=sort(unique(db$encountered_week)), ordered = TRUE)
+    }
+  
   # drop rows with NA since incidenceMapR (INLA) will ignore them anyway
     if(na.rm){
       
