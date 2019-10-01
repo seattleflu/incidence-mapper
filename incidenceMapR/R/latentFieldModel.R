@@ -98,6 +98,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   
   
   # latent fields
+  excludeLatentFieldColumns <- c()
+  
   for(COLUMN in names(inputData)[!(names(inputData) %in% c('positive','n'))]){
     
     if(COLUMN == 'time_row'){
@@ -115,6 +117,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
 
       formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
       # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2') # age doesn't go into space-time latent field
+      excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'age')
     }
     
     if(grepl('site',COLUMN)){
@@ -122,6 +125,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       # site intercept
       inputData$site_row_iid <- match(inputData[[COLUMN]],unique(inputData[[COLUMN]]))
       formula <- update(formula,  ~ . + f(site_row_iid, model='iid', hyper=modelDefinition$hyper$site_iid, replicate=replicateIdx))
+      excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'site')
       
       # site-age interaction
       # sites do collect different ages because of who accesses each site.
@@ -132,6 +136,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
                                             group = site_age_ageIdx, control.group=list(model="rw1")))
         # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
+        
+        excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'site')
       }
     }
     
@@ -283,10 +289,10 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         print(k/nrow(lc.data))
       }
     }
-
+    
     
   # get original values for linear combination categories
-  lc.colIdx <- (names(inputData) %in% c('pathogen',db$queryList$GROUP_BY$COLUMN)) & !(names(inputData) %in% validFactorNames)
+  lc.colIdx <- (names(inputData) %in% c('pathogen',db$queryList$GROUP_BY$COLUMN)) & !(names(inputData) %in% validFactorNames) & !(grepl( paste(excludeLatentFieldColumns,collapse='|'),names(inputData)))
   lc.data <- inputData[lc.rowIdx,lc.colIdx]
     
   df <- data.frame(outcome = outcome, inputData, replicateIdx)
