@@ -54,15 +54,15 @@ currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
     
-    SOURCE='seattle_geojson'
-    # SOURCE='wa_geojson'
-    # GEO='residence_census_tract'
-    GEO='residence_puma'
-    # GEO='residence_cra_name'
-    # PATHOGEN='flu'
-    PATHOGEN='all'
-    # PATHOGEN='rsv'
-    # PATHOGEN='other_non_flu'
+    # SOURCE='seattle_geojson'
+    # # SOURCE='wa_geojson'
+    # # GEO='residence_census_tract'
+    # GEO='residence_puma'
+    # # GEO='residence_cra_name'
+    # # PATHOGEN='flu'
+    # PATHOGEN='all'
+    # # PATHOGEN='rsv'
+    # # PATHOGEN='other_non_flu'
     
     shp <- masterSpatialDB(shape_level = gsub('residence_','',GEO), source = SOURCE)
     
@@ -101,7 +101,7 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$latentField) + 
                     geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+                    geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                     guides(color=FALSE, fill=FALSE) + 
                     theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
               )
