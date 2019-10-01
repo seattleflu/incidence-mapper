@@ -49,7 +49,7 @@ test-build-r-env: ## test build docker container from scratch
 		-w /app $(TEST_CONTAINER_NAME) \
 		bash -c "cd dbViewR && R CMD build . && \
 				cd ../incidenceMapR && R CMD build . && \
-				cd ../modelServR && R CMD build ." && \
+				cd ../modelServR && R CMD build . && \
 				cd ../modelVisualizeR && R CMD build ."
 
 build-production: build-r-package get_version ## Builds the api
