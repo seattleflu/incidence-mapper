@@ -228,9 +228,24 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
       }
   
       # "pathogen" column is required for incidenceMapR model definitions
+      # this logic should use a key-value config file instead of being hard-coded
         if(!('pathogen' %in% queryList$GROUP_BY$COLUMN)){
           if( 'pathogen' %in% queryList$WHERE$COLUMN){
-            db$pathogen <- paste(queryList$WHERE$IN['pathogen' %in% queryList$WHERE$COLUMN],collapse='-')
+            
+            if (all(grepl('flu',queryList$WHERE$COLUMN,ignore.case = TRUE))){
+              db$pathogen <- 'flu_positive'
+            } else if (all(grepl('rsv',queryList$WHERE$COLUMN,ignore.case = TRUE))) {
+              db$pathogen <- 'rsv_positive'
+            } else if (!any(grepl('flu',queryList$WHERE$COLUMN,ignore.case = TRUE) |
+                            grepl('not_yet_tested',queryList$WHERE$COLUMN,ignore.case = TRUE) |
+                            grepl('measles',queryList$WHERE$COLUMN,ignore.case = TRUE) )){
+              
+              db$pathogen <- 'flu_negative'
+            } else {
+              db$pathogen <- paste(queryList$WHERE$IN['pathogen' %in% queryList$WHERE$COLUMN],collapse='-')
+            }
+            
+            
           } else if ('pathogen' %in% queryList$SUMMARIZE$COLUMN) {
             db$pathogen <- paste(queryList$SUMMARIZE$IN['pathogen' %in% queryList$SUMMARIZE$COLUMN],collapse='-')
           } else {
