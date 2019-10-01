@@ -8,6 +8,7 @@ library(modelVisualizeR)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(lubridate)
 
 SRC <- 'production'
 # SRC <- 'simulated_data'
@@ -23,18 +24,26 @@ names(tmp2)<-tmp
 
 fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 
-pathogenKeys <- c(list(all='all',
-                  flu=fluPathogens,
-                  rsv=c('RSVA','RSVB'),
-                  other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles'))
-                  ),
-                  tmp2)
+# pathogenKeys <- c(list(all='all',
+#                   flu=fluPathogens,
+#                   rsv=c('RSVA','RSVB'),
+#                   other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles'))
+#                   ),
+#                   tmp2)
+
+pathogenKeys <- list(all='all', flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles')))
+
 
 factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
+# factors   <- c('site','sex','flu_shot')#,'age_range_fine_upper') # site overwhelms ram....
 
-geoLevels <- list( seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name','residence_census_tract'),
-                   wa_geojson = c('residence_puma')
+
+geoLevels <- list( #wa_geojson = c('residence_puma'),
+                   seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name')#,'residence_census_tract')
                  )
+
+
+currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 
 
 #####################################
@@ -44,16 +53,22 @@ geoLevels <- list( seattle_geojson = c('residence_puma','residence_neighborhood_
 # number of subjects with pathogen and factor at residence location 
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
+    
+    SOURCE='seattle_geojson'
+    # SOURCE='wa_geojson'
+    # GEO='residence_census_tract'
+    GEO='residence_puma'
+    # GEO='residence_cra_name'
+    # PATHOGEN='flu'
+    PATHOGEN='all'
+    # PATHOGEN='rsv'
+    # PATHOGEN='other_non_flu'
+    
+    shp <- masterSpatialDB(shape_level = gsub('residence_','',GEO), source = SOURCE)
+    
     for (PATHOGEN in names(pathogenKeys)){
-      
-      SOURCE='seattle_geojson'
-      # GEO='residence_census_tract'
-      GEO='residence_puma'
-      # GEO='residence_cra_name'
-      # PATHOGEN='flu'
-      PATHOGEN='all'
-      # PATHOGEN='rsv'
-      # PATHOGEN='other_non_flu'
+
+     
       
       queryIn <- list(
         SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
@@ -62,11 +77,9 @@ for (SOURCE in names(geoLevels)){
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
       
-      shp <- masterSpatialDB(shape_level = gsub('residence_','',GEO), source = SOURCE)
       
-      db <- expandDB( selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp )
+      db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
       
-
       # training occassionaly segfaults on but it does not appear to be deterministic...
       tries <- 0
       success<-0
@@ -88,9 +101,9 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$latentField) + 
                     geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-                    geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                     guides(color=FALSE, fill=FALSE) + 
-                    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+                    theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
               )
             dev.off()
             
@@ -100,6 +113,9 @@ for (SOURCE in names(geoLevels)){
             #   guides(color=FALSE, fill=FALSE) + 
             #   theme(axis.text.x = element_text(angle = 90, hjust = 1))
             # 
+            
+            saveModel(model, storeRDS=FALSE)
+            
             success<-1
             
           }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")}
