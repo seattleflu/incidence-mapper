@@ -232,14 +232,14 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
         if(!('pathogen' %in% queryList$GROUP_BY$COLUMN)){
           if( 'pathogen' %in% queryList$WHERE$COLUMN){
             
-            if (all(grepl('flu',queryList$WHERE$COLUMN,ignore.case = TRUE))){
+            if (all(grepl('flu',queryList$WHERE$IN,ignore.case = TRUE)) & length(queryList$WHERE$IN)>1){
               db$pathogen <- 'flu_positive'
-            } else if (all(grepl('rsv',queryList$WHERE$COLUMN,ignore.case = TRUE))) {
+            } else if (all(grepl('rsv',queryList$WHERE$IN,ignore.case = TRUE)) & length(queryList$WHERE$IN)>1) {
               db$pathogen <- 'rsv_positive'
-            } else if (!any(grepl('flu',queryList$WHERE$COLUMN,ignore.case = TRUE) |
-                            grepl('not_yet_tested',queryList$WHERE$COLUMN,ignore.case = TRUE) |
-                            grepl('measles',queryList$WHERE$COLUMN,ignore.case = TRUE) )){
-              
+            } else if (!any(grepl('flu',queryList$WHERE$IN,ignore.case = TRUE) |
+                            grepl('not_yet_tested',queryList$WHERE$IN,ignore.case = TRUE) |
+                            grepl('measles',queryList$WHERE$IN,ignore.case = TRUE) ) & length(queryList$WHERE$IN)>1
+                       ){
               db$pathogen <- 'flu_negative'
             } else {
               db$pathogen <- paste(queryList$WHERE$IN['pathogen' %in% queryList$WHERE$COLUMN],collapse='-')
