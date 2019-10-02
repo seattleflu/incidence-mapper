@@ -31,7 +31,7 @@ fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 #                   ),
 #                   tmp2)
 
-pathogenKeys <- list(all='all', flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles')))
+pathogenKeys <- list(all='all', flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')))
 
 
 factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
@@ -55,14 +55,14 @@ for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
     
     # SOURCE='seattle_geojson'
-    # # SOURCE='wa_geojson'
-    # # GEO='residence_census_tract'
+    # SOURCE='wa_geojson'
+    # GEO='residence_census_tract'
     # GEO='residence_puma'
-    # # GEO='residence_cra_name'
-    # # PATHOGEN='flu'
+    # GEO='residence_cra_name'
+    # PATHOGEN='flu'
     # PATHOGEN='all'
-    # # PATHOGEN='rsv'
-    # # PATHOGEN='other_non_flu'
+    # PATHOGEN='rsv'
+    # PATHOGEN='other_non_flu'
     
     shp <- masterSpatialDB(shape_level = gsub('residence_','',GEO), source = SOURCE)
     
