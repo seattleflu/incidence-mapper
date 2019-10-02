@@ -21,12 +21,16 @@ class GenericModel(base):
 class GenericModelSchema(ma.ModelSchema):
 
     @pre_load
-    def correct_query_str(self, *args):
+    def correct_query_str(self, *args, **kwargs):
         pass
 
     @post_dump
-    def correct_query_str(self, data):
-        data['query_str'] = json.loads(data['query_str'])
+    def correct_query_str(self, data, many=False):
+        if many and isinstance(data, list):
+            for i, d in enumerate(data):
+                data[i]['query_str'] = json.loads(d['query_str'])
+        else:
+            data['query_str'] = json.loads(data['query_str'])
         return data
 
     class Meta:

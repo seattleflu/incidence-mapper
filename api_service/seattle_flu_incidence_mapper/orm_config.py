@@ -10,11 +10,11 @@ ma = None
 
 
 def get_declarative_base():
-    global  base
+    global base
     if base is None:
         base = declarative_base()
         base.query = get_session().query_property()
-    return base
+    return get_db().Model
 
 
 def get_db():

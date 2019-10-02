@@ -21,7 +21,7 @@ def read_all():
 
     # Serialize the data for the response
     pathogen_model_schema = GenericModelSchema(many=True)
-    data = pathogen_model_schema.dump(pathogen_models).data
+    data = pathogen_model_schema.dump(pathogen_models)
     return data
 
 
@@ -45,7 +45,7 @@ def read(model_id):
 
         # Serialize the data for the response
         pathogen_model_schema = GenericModelSchema()
-        data = pathogen_model_schema.dump(pathogen_model).data
+        data = pathogen_model_schema.dump(pathogen_model)
         return data
 
     # Otherwise, nope, didn't find that pathogen_model
@@ -77,7 +77,7 @@ def create():
     if schema and new_model:
 
         # Serialize and return the newly created pathogen_model in the response
-        data = schema.dump(new_model).data
+        data = schema.dump(new_model)
 
         return data, 201
     return "Unknown error", 400
@@ -106,7 +106,7 @@ def insert_one_model(form, files) -> Tuple[GenericModel, GenericModelSchema]:
                  model_type=form['model_type'],
                  model_key=model_key)
     schema = GenericModelSchema()
-    new_model = schema.load(model, session=db.session).data
+    new_model = schema.load(model, session=db.session)
     # Add the pathogen_model to the database
     db.session.add(new_model)
 
@@ -136,7 +136,7 @@ def update(pathogen_model_id, pathogen_model):
 
         # turn the passed in pathogen_model into a db object
         schema = GenericModelSchema()
-        updated = schema.load(pathogen_model, session=db.session).data
+        updated = schema.load(pathogen_model, session=db.session)
 
         # Set the id to the pathogen_model we want to update
         updated.id = update_pathogen_model.id
@@ -146,7 +146,7 @@ def update(pathogen_model_id, pathogen_model):
         db.session.commit()
 
         # return updated pathogen_model in the response
-        data = schema.dump(update_pathogen_model).data
+        data = schema.dump(update_pathogen_model)
 
         return data, 200
 
