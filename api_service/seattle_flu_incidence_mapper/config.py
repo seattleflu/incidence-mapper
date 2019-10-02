@@ -39,6 +39,7 @@ app.config['JWT_ISSUER'] = 'seattle_flu_study'
 app.config['JWT_SECRET'] = os.environ.get('JWT_SECRET',  'development')
 app.config['JWT_LIFETIME_SECONDS'] = 600
 app.config['JWT_ALGORITHM'] = os.environ.get('JWT_ALGORITHM',  'HS256')
+app.config['MODEL_STORE'] = os.getenv('MODEL_STORE', '/model_store')
 
 db = setup_db(basedir, app)
 migrate = Migrate(app, db)

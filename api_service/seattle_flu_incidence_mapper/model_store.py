@@ -21,8 +21,12 @@ def save_model_file(file, id):
     basedir = current_app.config.get('MODEL_STORE', '/model_store')
     file_path = os.path.join(basedir, id)
     csv_path = file_path + '.csv'
+    try:
+        file.stream.seek(0)
+    except:
+        pass
     file.save(csv_path)
     # convert model to json as well
     import pandas as pd
     df = pd.read_csv(csv_path)
-    df.to_json(file_path + '.json', orient='records', index=False)
+    df.to_json(file_path + '.json', orient='records')
