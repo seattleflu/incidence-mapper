@@ -12,7 +12,9 @@
 #' @examples
 #'
 expandDB <- function( db = dbViewR::selectFromDB(),
-                      shp = dbViewR::masterSpatialDB(shape_level = 'census_tract', source = 'king_county_geojson') ){
+                      shp = dbViewR::masterSpatialDB(shape_level = 'census_tract', source = 'king_county_geojson'),
+                      currentWeek = NULL, 
+                      minWeek = NULL){
   
   
   # list of valid column data for expanding and joining
@@ -21,11 +23,23 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     
     # encountered_week
     if ("encountered_week" %in% names(db$observedData)){
+      
       weeks <- unique(sort(db$observedData$encountered_week))
-      minYear <- year<-as.numeric(gsub('-W[0-9]{2}','',weeks[1]))
-      maxYear <- year<-as.numeric(gsub('-W[0-9]{2}','',weeks[length(weeks)]))
-      minWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[1] ))
-      maxWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[length(weeks)] )) + (maxYear-minYear)*52 + 4 # 4 week look-ahead
+      
+      if(is.null(minWeek)){
+        minYear <- as.numeric(gsub('-W[0-9]{2}','',weeks[1]))
+        minWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[1] ))
+      } else {
+        minYear <- as.numeric(gsub('-W[0-9]{2}','',minWeek))
+      }
+      
+      if(is.null(currentWeek)){
+        maxYear <- as.numeric(gsub('-W[0-9]{2}','',weeks[length(weeks)]))
+        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[length(weeks)] )) + (maxYear-minYear)*52 + 4 # 4 week look-ahead
+      } else {
+        maxYear <- as.numeric(gsub('-W[0-9]{2}','',currentWeek)) 
+        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',currentWeek )) + (maxYear-minYear)*52 + 4 # 4 week look-ahead
+      }
       
       weeks <- 1+( (seq(minWeek,maxWeek,by=1)-1) %% 52)
       yearBreaks <- c(0,which(diff(weeks)<1), length(weeks))
@@ -109,6 +123,11 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       db$observedData[[colName]] <- shp[[colName]][match(db$observedData[[nestedVariables[nestedVariables == colName]]],as.character(shp[[nestedVariables[nestedVariables == colName]]]))]
     }
   
+  # order weeks  
+    if('encountered_week' %in% names(db$observedData)){
+      db$observedData$encountered_week <- factor(db$observedData$encountered_week, levels=sort(unique(db$observedData$encountered_week)), ordered = TRUE)
+    }
+    
   # row indices for INLA
   if(any(grepl('encountered_week',names(db$observedData)))){
     db$observedData$time_row <- validColumnData$time_row[match(db$observedData$encountered_week,validColumnData$encountered_week)]

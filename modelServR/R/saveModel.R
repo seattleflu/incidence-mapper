@@ -57,19 +57,10 @@ getModelQueryObjectFromModel<- function(model, latent = FALSE) {
   result$observed <- validColumnNames
     
   
-  # grab the pathogen from the where clause
-  if ("WHERE" %in% names(model$modelDefinition$queryList) && 
-      "COLUMN" %in% names(model$modelDefinition$queryList$WHERE) &&
-      model$modelDefinition$queryList$WHERE$COLUMN == "pathogen" && 
-      "IN" %in% names(model$modelDefinition$queryList$WHERE)
-      )
-  {
-    logdebug("Pathogen from Query Src:", str(model$modelDefinition$queryList$WHERE$IN))
-    result$pathogen <- model$modelDefinition$queryList$WHERE$IN
-  } else {
-    result$pathogen <- "all"
-  }
-  
+  # grab pathogen from model input data (pathogen is required field, enforced in selectFromDB.R)
+  result$pathogen <- paste(sort(unique(unique(model$modelDefinition$inputData$pathogen))),collapse='-')
+  logdebug("Pathogen from Query Src:", result$pathogen)
+
   if ( !is.null(model$modelDefinition$spatial_domain)) {
     # grab spatial_domain from modelDefinition
     result$spatial_domain <- jsonlite::unbox(model$modelDefinition$spatial_domain)
@@ -183,7 +174,7 @@ saveModel <- function(model, modelStoreDir =  Sys.getenv('MODEL_STORE', '/home/r
       model$latentField,
       paste(modelStoreDir, '/', filename, '.csv', sep = ''),
       row.names = FALSE,
-      quote = FALSE
+      quote = TRUE
     )
 
     # write to our model db file
@@ -221,7 +212,7 @@ saveModel <- function(model, modelStoreDir =  Sys.getenv('MODEL_STORE', '/home/r
     model$modeledData,
     paste(modelStoreDir, '/', filename, '.csv', sep = ''),
     row.names = FALSE,
-    quote = FALSE
+    quote = TRUE
   )
   write.table(
     newRow, file = modelDBfilename, sep = '\t', row.names = FALSE, col.names = !file.exists(modelDBfilename),

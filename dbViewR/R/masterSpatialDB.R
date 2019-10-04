@@ -83,22 +83,29 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
       FIELDNAME <- names(shp)[grepl('CRA_NAM',names(shp),ignore.case = TRUE)]
       shp$residence_cra_name <- as.character(shp[[FIELDNAME]])
       shp$work_cra_name <- as.character(shp[[FIELDNAME]])
-    } else if (grepl('NEIGHBO',NAME,ignore.case = TRUE)){
+    } 
+    if (grepl('NEIGHBO',NAME,ignore.case = TRUE)){
       FIELDNAME <- names(shp)[grepl('NEIGHBO',names(shp),ignore.case = TRUE)]
       shp$residence_neighborhood_district_name <- as.character(shp[[FIELDNAME]])
       shp$work_neighborhood_district_name <- as.character(shp[[FIELDNAME]])
-    } else if (grepl('PUMA',NAME,ignore.case = TRUE)){
-      FIELDNAME <- names(shp)[grepl('PUMA',names(shp),ignore.case = TRUE)]
-      shp$residence_puma <- as.character(shp[[FIELDNAME]])
-      shp$work_puma <- as.character(shp[[FIELDNAME]])
-    } else if (grepl('CITY',NAME,ignore.case = TRUE)){
+    }
+    if (any(grepl('PUMA', NAME))){
+      FIELDNAME <- names(shp)[grepl('GEOID',names(shp),ignore.case = TRUE) & !grepl('AFF',names(shp),ignore.case = TRUE)]
+      puma7 <- paste(substr(as.character(shp[[FIELDNAME]]),1,2),as.character(shp[[names(shp)[grepl('PUMA',names(shp))]]]),sep='')
+      shp$residence_puma <- puma7
+      shp$work_puma <- puma7
+    }
+    if (grepl('CITY',NAME,ignore.case = TRUE)){
       FIELDNAME <- names(shp)[grepl('CITY',names(shp),ignore.case = TRUE)]
       shp$residence_city <- as.character(shp[[FIELDNAME]])
       shp$work_city <- as.character(shp[[FIELDNAME]])
-    } else if (grepl('GEOID',NAME,ignore.case = TRUE) & !grepl('AFF',NAME,ignore.case = TRUE)){
+    }
+    if (grepl('GEOID',NAME,ignore.case = TRUE) & !grepl('AFF',NAME,ignore.case = TRUE) ){
       FIELDNAME <- names(shp)[grepl('GEOID',names(shp),ignore.case = TRUE) & !grepl('AFF',names(shp),ignore.case = TRUE)]
-      shp$residence_census_tract <- as.character(shp[[FIELDNAME]])
-      shp$work_census_tract <- as.character(shp[[FIELDNAME]])
+      if (all(sapply(as.character(shp[[FIELDNAME]]),nchar)==11)){
+        shp$residence_census_tract <- as.character(shp[[FIELDNAME]])
+        shp$work_census_tract <- as.character(shp[[FIELDNAME]])
+      }
     } 
   }
   

@@ -6,7 +6,7 @@
 \usage{
 expandDB(db = dbViewR::selectFromDB(),
   shp = dbViewR::masterSpatialDB(shape_level = "census_tract", source =
-  "king_county_geojson"))
+  "king_county_geojson"), currentWeek = NULL, minWeek = NULL)
 }
 \arguments{
 \item{db}{tibble with valid column names for INLA model}
