@@ -29,4 +29,6 @@ def save_model_file(file, id):
     # convert model to json as well
     import pandas as pd
     df = pd.read_csv(csv_path)
+    if 'residence_puma' in df.columns:
+        df['residence_puma'] = df['residence_puma'].astype(str)
     df.to_json(file_path + '.json', orient='records')

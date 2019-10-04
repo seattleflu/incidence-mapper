@@ -35,7 +35,7 @@ def get_models(url, model_store, model_type=None, only_latest=True):
 
 if __name__ == "__main__":
 
-    default_model_store_path = os.path.abspath(os.path.join(os.path.os.getcwd(), '../../test_model_store'))
+    default_model_store_path = os.path.abspath(os.path.join(os.path.os.getcwd(), '../../test_model_store2'))
     parser = argparse.ArgumentParser(description='Uploads trained SF Models to production')
     parser.add_argument("--db-file", default=os.path.join(default_model_store_path, "modelDB.tsv"),
                         help="Where the modelDB.tsv produced during training is stored")

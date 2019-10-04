@@ -8,6 +8,7 @@ from seattle_flu_incidence_mapper.config import db
 from flask import abort, request, make_response, send_file
 from seattle_flu_incidence_mapper.utils import get_model_id
 
+
 def read_all():
     """
     This function responds to a request for /api/pathogen_models
