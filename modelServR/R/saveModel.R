@@ -180,7 +180,7 @@ saveModel <- function(model, modelStoreDir =  Sys.getenv('MODEL_STORE', '/home/r
     # write to our model db file
     write.table(
       newRow, file = modelDBfilename, sep = '\t', row.names = FALSE, col.names = !file.exists(modelDBfilename),
-      quote = TRUE, append = file.exists(modelDBfilename)
+      quote = FALSE, append = file.exists(modelDBfilename)
     )
   }
   
@@ -212,7 +212,7 @@ saveModel <- function(model, modelStoreDir =  Sys.getenv('MODEL_STORE', '/home/r
     model$modeledData,
     paste(modelStoreDir, '/', filename, '.csv', sep = ''),
     row.names = FALSE,
-    quote = FALSE
+    quote = TRUE
   )
   write.table(
     newRow, file = modelDBfilename, sep = '\t', row.names = FALSE, col.names = !file.exists(modelDBfilename),
