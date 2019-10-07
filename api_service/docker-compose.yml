@@ -2,24 +2,37 @@ version: '3'
 
 services:
   db:
-    image: postgres
+    image: postgres:11
     restart: always
     environment:
       POSTGRES_USER: seattle_flu
       POSTGRES_PASSWORD: seattle_flu
-      
+    ports:
+      - 5432:5432
+    volumes:
+    # If you have a backup sql file, uncomment this line and update the src file appropriately.
+    # To generate a backup run
+    # docker-compose exec db pg_dumpall -c -U seattle_flu > backup.sql
+    - ./backup.sql:/docker-entrypoint-initdb.d/backup.sql
   service:
     build:
       context: .
       dockerfile: Dockerfile
-    image: idm-docker-production.packages.idmod.org/sfim
+    image: idm-docker-production.packages.idmod.org/sfim-api
+    depends_on:
+      - db
     ports:
-      - 5000:80
+    # You may want to customize port(multiple environment, conflicts local stuff, etc)
+    # To do this, run dev_run.sh like so API_PORT=5001 ./dev_run.sh
+      - ${API_PORT:-5000}:80
     volumes:
+      - "./models.db:/app/seattle_flu_incidence_mapper/models.db"
       - "./test_model_store:/model_store"
     environment:
     - "CREATE_DB=1"
-    - "SQLALCHEMY_URI=postgres+psycopg2://seattle_flu:@db"
+    - "SQLALCHEMY_DATABASE_URI=postgres+psycopg2://seattle_flu:seattle_flu@db"
+    - "MODEL_STORE=/model_store"
+
 
 
 

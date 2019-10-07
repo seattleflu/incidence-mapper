@@ -1,9 +1,6 @@
-import functools
 import os
-
 from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declarative_base
 
 db = None
@@ -11,12 +8,13 @@ session = None
 base = None
 ma = None
 
+
 def get_declarative_base():
-    global  base
+    global base
     if base is None:
         base = declarative_base()
         base.query = get_session().query_property()
-    return base
+    return get_db().Model
 
 
 def get_db():
@@ -34,8 +32,6 @@ def setup_db(basedir, app):
     app.config['SQLALCHEMY_ECHO'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:////' + os.path.join(basedir, 'models.db'))
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    Session = orm.sessionmaker()
-
 
     # Create the SQLAlchemy db instance
     db = SQLAlchemy(app)

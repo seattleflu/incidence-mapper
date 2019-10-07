@@ -1,7 +1,0 @@
-seattle_flu_incidence_mapper
-============================
-
-.. toctree::
-   :maxdepth: 4
-
-   seattle_flu_incidence_mapper

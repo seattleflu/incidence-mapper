@@ -45,7 +45,8 @@ setup(
         'psycopg2-binary~=2.8',
         'Flask-Migrate~=2.4',
         'python-jose[cryptography]~=3.0',
-        'flask_cors~=3.0'
+        'flask_cors~=3.0',
+        'pandas~=0.25'
     ],
 
     extras_require={
@@ -55,7 +56,7 @@ setup(
         'production': ['uwsgi']
     },
     project_urls={
-        'Bug Reports': 'https://github.com/InstituteforDiseaseModeling/Seattle-Flu-Incidence-Mapper/issues',
-        'Source': 'https://github.com/InstituteforDiseaseModeling/Seattle-Flu-Incidence-Mapper',
+        'Bug Reports': 'https://github.com/seattleflu/incidence-mapper/issues',
+        'Source': 'https://github.com/seattleflu/incidence-mapper',
     }
 )

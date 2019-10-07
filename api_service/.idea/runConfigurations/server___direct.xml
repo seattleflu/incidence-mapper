@@ -7,6 +7,8 @@
       <env name="PYTHONUNBUFFERED" value="1" />
       <env name="FLASK_ENV" value="development" />
       <env name="DEBUG_TOKENS" value="1" />
+      <env name="SQLALCHEMY_DATABASE_URI" value="sqlite://$PROJECT_DIR$/dbconversion/models.db" />
+      <env name="MODEL_STORE" value="$PROJECT_DIR$/dbconversion/model_store" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/seattle_flu_incidence_mapper" />
@@ -15,7 +17,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/seattle_flu_incidence_mapper/app.py" />
-    <option name="PARAMETERS" value="run" />
+    <option name="PARAMETERS" value="manaage run" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
