@@ -11,7 +11,7 @@ Development Environment tips
 
 3. Checkout the code::
 
-    $ git clone git@github.com:your_name_here/Seattle-Flu-Incidence-Mapper.git
+    $ git clone git@github.com:your_name_here/incidence-mapper.git
 4. Navigate to the checkout and run::
 
     $ pip install -r .[dev]
@@ -35,7 +35,7 @@ If you are doing UI, Model Development, or development on an application that on
 1. Install docker and docker-compose
 2. Checkout the code::
 
-    $ git clone git@github.com:your_name_here/Seattle-Flu-Incidence-Mapper.git
+    $ git clone git@github.com:your_name_here/incidence-mapper.git
 
 3. Navigate to the checkout and run::
 

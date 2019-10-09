@@ -43,7 +43,14 @@ appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=T
     GROUP_BY =list(COLUMN=c('site_type',geo)),
     SUMMARIZE=list(COLUMN='site_type', IN= 'all')
   )
-  catchmentDb <- expandDB( selectFromDB(  queryIn, source=source, na.rm=na.rm ), shp=shp )
+  
+  catchmentDb <- selectFromDB(  queryIn, source=source, na.rm=na.rm )
+  
+  # positives as 0 instead of NaN when positive count is total count always (eg catchments) 
+  catchmentDb$observedData$positive[is.na(catchmentDb$observedData$positive)]<-0
+  
+  catchmentDb <- expandDB( catchmentDb, shp=shp )
+  
   
   # at some point, we maybe should check if the catchment map is already saved, 
   # although this is a cheap computation relative to everything else, so that may never matter

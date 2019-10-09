@@ -52,7 +52,7 @@ test-build-r-env: ## test build docker container from scratch
 				cd ../modelServR && R CMD build . && \
 				cd ../modelVisualizeR && R CMD build ."
 
-build-production: build-r-package get_version ## Builds the api
+build-production: get_version ## Builds the api
 	-mkdir -p api_service/models
 	docker-compose -f docker-compose.production.yml build
 

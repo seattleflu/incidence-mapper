@@ -5,13 +5,6 @@ services:
     restart: always
     environment:
       POSTGRES_USER: seattle_flu
-  # placeholder for building worker
-  workers:
-    build:
-      context: .
-      dockerfile: Dockerfile.worker
-    image: ${REGISTRY:-idm-docker-production.packages.idmod.org}/sfim-worker:${version:-latest}
-    command: touch t
   service:
       build:
         context: api_service

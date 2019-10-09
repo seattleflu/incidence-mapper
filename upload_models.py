@@ -4,31 +4,27 @@ from logging import getLogger
 import requests
 import os
 from tqdm import tqdm
+from ratelimit import limits, RateLimitException
+from backoff import on_exception, expo
 logger = getLogger()
 
 
+@on_exception(expo, RateLimitException, max_tries=8)
+@limits(calls=2, period=1)
 def upload_model(model, api_url, models_path, api_key, continue_on_error=False):
     headers = dict(Authorization=f'Bearer {api_key}')
     model_path = os.path.join(models_path, f"{model['filename']}.csv")
-    if len(model['rds']) > 0:
-        rds_path = os.path.join(models_path, os.path.basename(model['rds']))
-    else:
-        rds_path = None
     model_data = {
         "id": model['filename'],
         "name": model['name'],
         "query_str": model['queryJSON'],
         "model_type": model['type'],
-        "created": model['created'],
-
+        "created": model['created']
     }
     try:
         files = {
             'model': (os.path.basename(model_path), open(model_path, 'rb'), 'text/plain')
         }
-        if rds_path and os.path.exists(rds_path):
-            files['rds'] = (os.path.basename(rds_path), open(rds_path, 'rb'), 'application/octet-stream')
-
         r = requests.post(api_url, data=model_data, headers=headers, files=files)
         if r.status_code != 201 and not continue_on_error:
             logger.error(f"Failed to upload: {model['filename']}")
