@@ -58,7 +58,6 @@ plotforecasts<- function(dat, fitted_param , ggtitlestr = NULL , outpath = NULL)
 #' @param num_future_data number of weeks forward to make ILI estimates
 #' 
 #' @import lubridate
-#' @import reshape2
 #' @import dplyr
 #' @import lubridate
 #' @import forecast
