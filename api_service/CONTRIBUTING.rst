@@ -16,7 +16,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/InstituteforDiseaseModeling/Seattle-Flu-Incidence-Mapper/issues.
+Report bugs at https://github.com/seattleflu/incidence-mapper/issues.
 
 If you are reporting a bug, please include:
 
@@ -46,7 +46,7 @@ articles, and such.
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/InstituteforDiseaseModeling/Seattle-Flu-Incidence-Mapper/issues.
+The best way to send feedback is to file an issue at https://github.com/seattleflu/incidence-mapper/issues.
 
 If you are proposing a feature:
 
@@ -58,17 +58,17 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `Seattle-Flu-Incidence-Mapper` for local development.
+Ready to contribute? Here's how to set up `incidence-mapper` for local development.
 
-1. Fork the `Seattle-Flu-Incidence-Mapper` repo on GitHub.
+1. Fork the `incidence-mapper` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/Seattle-Flu-Incidence-Mapper.git
+    $ git clone git@github.com:your_name_here/incidence-mapper.git
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
-    $ mkvirtualenv Seattle-Flu-Incidence-Mapper
-    $ cd Seattle-Flu-Incidence-Mapper/
+    $ mkvirtualenv incidence-mapper
+    $ cd incidence-mapper/
     $ python setup.py develop
 
 4. Create a branch for local development::
@@ -80,7 +80,7 @@ Ready to contribute? Here's how to set up `Seattle-Flu-Incidence-Mapper` for loc
 5. When you're done making changes, check that your changes pass flake8 and the
    tests, including testing other Python versions with tox::
 
-    $ flake8 Seattle-Flu-Incidence-Mapper tests
+    $ flake8 incidence-mapper tests
     $ python setup.py test or py.test
     $ tox
 
@@ -99,7 +99,7 @@ Tips
 
 To run a subset of tests::
 
-    $ py.test tests.test_Seattle-Flu-Incidence-Mapper
+    $ py.test tests.test_incidence-mapper
 
 Deploying
 ---------

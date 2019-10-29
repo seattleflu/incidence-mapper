@@ -1,5 +1,4 @@
 BUILD_CONTAINER_NAME ?= idm-docker-staging.packages.idmod.org/sfim-build-env:latest
-
 .PHONY= get_version build-r-env build-r-package build-api help
 
 help: ## This help.
@@ -13,6 +12,10 @@ get_version:
 
 build-r-env: ## build docker container that can package R scripts
 	docker build -f Dockerfile.RBuildEnv . \
+		-t $(BUILD_CONTAINER_NAME)
+
+build-r-env-lite:
+	docker build --build-arg WORKERS=2 -f Dockerfile.RBuildEnv . \
 		-t $(BUILD_CONTAINER_NAME)
 
 publish-r-env: build-r-env ## Publish our R Environment
@@ -36,7 +39,7 @@ build-r-package: clean pull-r-env ## Build the r package as tar ball
 				cd ../incidenceMapR && R CMD build . && \
 				cd ../modelServR && R CMD build ."
 
-build-production: build-r-package get_version ## Builds the api
+build-production: get_version ## Builds the api
 	-mkdir -p api_service/models
 	docker-compose -f docker-compose.production.yml build
 

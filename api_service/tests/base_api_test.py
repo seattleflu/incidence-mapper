@@ -37,6 +37,8 @@ class TestClient(FlaskClient):
 
 class BaseApiTest(unittest.TestCase):
     def setUp(self):
+        os.environ['MODEL_STORE'] = os.path.abspath( os.path.join(os.path.dirname(__file__), '..', 'test_model_store'))
         app.testing = True
+        app.config['MODEL_STORE'] = os.path.abspath( os.path.join(os.path.dirname(__file__), '..', 'test_model_store'))
         app.test_client_class = TestClient
         self.app = app.test_client()

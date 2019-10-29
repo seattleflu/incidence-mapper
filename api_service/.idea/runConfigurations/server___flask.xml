@@ -6,15 +6,19 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
       <env name="FLASK_ENV" value="development" />
+      <env name="SQLALCHEMY_DATABASE_URI" value="sqlite:///$PROJECT_DIR$/dbconversion/models.db" />
+      <env name="FLASK_APP" value="seattle_flu_incidence_mapper.app:app" />
+      <env name="MODEL_STORE" value="$PROJECT_DIR$/dbconversion/model_store" />
+      <env name="MODEL_HOST_PATH" value="$PROJECT_DIR$/dbconversion/model_store" />
     </envs>
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/seattle_flu_incidence_mapper" />
+    <option name="WORKING_DIRECTORY" value="$USER_HOME$/.virtualenvs/api_service" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="${VIRTUAL_ENV}$/bin/flask" />
-    <option name="PARAMETERS" value="run" />
+    <option name="SCRIPT_NAME" value="$USER_HOME$/.virtualenvs/api_service/bin/flask" />
+    <option name="PARAMETERS" value="run --port 5001" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
