@@ -84,7 +84,6 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   
   
   ## calculate forecast date range
-  currentWeek <- paste(lubridate::isoyear(Sys.time()) ,'-W',lubridate::isoweek(Sys.time()),sep='')
   last_ILI_week <- max(dat$encountered_week)
   
   minYear <- year<-as.numeric(gsub('-W[0-9]{2}','',last_ILI_week))
