@@ -38,8 +38,9 @@ factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
 # factors   <- c('site','sex','flu_shot')#,'age_range_fine_upper') # site overwhelms ram....
 
 
-geoLevels <- list( # wa_geojson = c('residence_puma'),
-                   seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name','residence_census_tract')
+geoLevels <- list(
+                   seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
+                   wa_geojson = c('residence_puma')
                  )
 
 
