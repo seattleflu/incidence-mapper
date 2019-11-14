@@ -81,6 +81,9 @@ for (SOURCE in names(geoLevels)){
       
       db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
       
+      #if you want to add the ILI data to the db
+      db <- appendILIDataFc(db, currentWeek)
+      
       # training occassionaly segfaults on but it does not appear to be deterministic...
       tries <- 0
       success<-0
