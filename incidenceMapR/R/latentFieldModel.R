@@ -141,6 +141,24 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       }
     }
     
+    if(COLUMN %in% c('residence_regional_name')){
+      
+      inputData$residence_regional_nameRow <- match(inputData$residence_regional_name,unique(inputData$residence_regional_name))
+      
+      if('time_row' %in% names(inputData)){
+        
+        inputData$time_row_residence_regional_name <- inputData$time_row
+        
+        formula <- update(formula,  ~ . + f(residence_regional_nameRow, model='iid', hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
+                                            group = time_row_residence_regional_name, control.group=list(model="rw2")))
+        validLatentFieldColumns <- c(validLatentFieldColumns,'residence_regional_nameRow','time_row_residence_regional_name')
+      } else {
+        
+        formula <- update(formula,  ~ . + f(residence_regional_nameRow, model='iid', hyper=modelDefinition$hyper$global, replicate=replicateIdx))
+        validLatentFieldColumns <- c(validLatentFieldColumns,'residence_regional_nameRow')
+      }
+    }
+    
     if(COLUMN %in% c('residence_puma')){
       
       inputData$residence_pumaRow <- match(inputData$residence_puma,unique(inputData$residence_puma))

@@ -39,8 +39,9 @@ factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
 
 
 geoLevels <- list(
-                   seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
-                   wa_geojson = c('residence_puma')
+                   sfs_domain_geojson = 'residence_regional_name'#,
+                   # seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
+                   # wa_geojson = c('residence_puma')
                  )
 
 
@@ -55,12 +56,15 @@ currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
     
+    # SOURCE='sfs_domain_geojson'
+    # GEO='residence_regional_name'
+    # PATHOGEN='flu'
+    
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
     # GEO='residence_census_tract'
     # GEO='residence_puma'
     # GEO='residence_cra_name'
-    # PATHOGEN='flu'
     # PATHOGEN='all'
     # PATHOGEN='rsv'
     # PATHOGEN='other_non_flu'
@@ -77,7 +81,6 @@ for (SOURCE in names(geoLevels)){
         GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
-      
       
       db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
       
