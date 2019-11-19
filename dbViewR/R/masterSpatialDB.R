@@ -15,7 +15,7 @@
 #'
 masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_geojson', rm_files = TRUE){
 
-  validShapeLevels <- c("census_tract","cra_name","neighborhood_district_name","puma","city")
+  validShapeLevels <- c("census_tract","cra_name","neighborhood_district_name","puma","city","regional_name")
   
   if (source == 'seattle_geojson' & shape_level %in% validShapeLevels){
 
@@ -49,6 +49,17 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
     download.file(url = sourceURL,  destfile = filename)
     
     shp <- sf::st_as_sf(geojsonio::geojson_read(filename, what = "sp"))
+    
+  } else if (source == 'sfs_domain_geojson' & shape_level %in% validShapeLevels[c(1,6)] ){
+    
+    validShapeFilenames<- c("2016_wa_censusTracts%2Bsfs_domain.geojson", "sfs_domain_neighborhood%2Bpuma.geojson")
+    
+    filename<-validShapeFilenames[validShapeLevels[c(1,6)] %in% shape_level]
+    
+    sourceURL <- paste('https://raw.githubusercontent.com/seattleflu/seattle-geojson/master/sfs_domain_geojsons/',filename,sep='')
+    download.file(url = sourceURL,  destfile = filename)
+    
+    shp <- sf::st_as_sf(geojsonio::geojson_read(filename, what = "sp"))
 
   } else if(source == 'simulated_data' & shape_level == "census_tract"){
     
@@ -75,6 +86,10 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
   if(any(grepl("CRA_NAM",names(shp), ignore.case = TRUE))){
     levels(shp$CRA_NAM)<-c(levels(shp$CRA_NAM),'NA')
     shp$CRA_NAM[is.na(shp$CRA_NAM)]<-'NA'
+  }
+  if(any(grepl("regional_name",names(shp), ignore.case = TRUE))){
+    levels(shp$regional_name)<-c(levels(shp$regional_name),'NA')
+    shp$regional_name[is.na(shp$regional_name)]<-'NA'
   }
   
   # harmonize shp names with database names for joins down the line
@@ -107,6 +122,11 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
         shp$work_census_tract <- as.character(shp[[FIELDNAME]])
       }
     } 
+    if (grepl('regional_name',NAME,ignore.case = TRUE)){
+      FIELDNAME <- names(shp)[grepl('regional_name',names(shp),ignore.case = TRUE)]
+      shp$residence_regional_name <- as.character(shp[[FIELDNAME]])
+      shp$work_regional_name <- as.character(shp[[FIELDNAME]])
+    }
   }
   
   # add spatial domain

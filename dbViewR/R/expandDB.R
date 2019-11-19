@@ -71,19 +71,25 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       validColumnData$residence_neighborhood_district_name = sort(unique(shp$residence_neighborhood_district_name))
       validColumnData$residence_puma = sort(unique(shp$residence_puma))
       validColumnData$residence_city = sort(unique(shp$residence_city))
+      validColumnData$residence_regional_name = sort(unique(shp$residence_regional_name))
       validColumnData$work_census_tract = shp$work_census_tract
       validColumnData$work_cra_name = sort(unique(shp$work_cra_name))
       validColumnData$work_neighborhood_district_name = sort(unique(shp$work_neighborhood_district_name))
       validColumnData$work_puma = sort(unique(shp$work_puma))
       validColumnData$work_city = sort(unique(shp$work_city))
+      validColumnData$work_regional_name = sort(unique(shp$work_regional_name))
+      
       
       # NA handling
       validColumnData$residence_cra_name = validColumnData$residence_cra_name[validColumnData$residence_cra_name!='NA']
       validColumnData$residence_neighborhood_district_name = validColumnData$residence_neighborhood_district_name[validColumnData$residence_neighborhood_district_name!='NA']
       validColumnData$residence_city = validColumnData$residence_city[validColumnData$residence_city!='NA']
+      validColumnData$residence_regional_name = validColumnData$residence_regional_name[validColumnData$residence_regional_name!='NA']
       validColumnData$work_cra_name = validColumnData$work_cra_name[validColumnData$work_cra_name!='NA']
       validColumnData$work_neighborhood_district_name = validColumnData$work_neighborhood_district_name[validColumnData$work_neighborhood_district_name!='NA']
       validColumnData$work_city = validColumnData$work_city[validColumnData$work_city!='NA']
+      validColumnData$work_regional_name = validColumnData$work_regional_name[validColumnData$work_regional_name!='NA']
+      
       
     # factors (these don't get interpolated by the models, so we only want the valid levels for the dataset at hand)
       factorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('age','n','positive')) | 
@@ -96,7 +102,7 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
   
   # don't expand on nested shape variables
-    nestedVariables <- c('cra_name','neighborhood_district_name','puma','city')
+    nestedVariables <- c('cra_name','neighborhood_district_name','puma','city', 'regional_name')
 
   # expand.grid for non-nested variables
     colIdx <- ( names(validColumnData) %in% names(db$observedData) ) &  !( names(validColumnData) %in% nestedVariables) 

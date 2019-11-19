@@ -15,8 +15,8 @@
 #'
 appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=TRUE){
   
-  validGeoLevels <- c('residence_puma','residence_cra_name','residence_neighborhood_district_name','residence_census_tract','residence_city',
-                      'work_puma','work_cra_name','work_neighborhood_district_name','work_census_tract','work_city')
+  validGeoLevels <- c('residence_puma','residence_cra_name','residence_neighborhood_district_name','residence_census_tract','residence_city','residence_regional_name',
+                      'work_puma','work_cra_name','work_neighborhood_district_name','work_census_tract','work_city','work_regional_name')
   geo <- validGeoLevels[validGeoLevels %in% names(db$observedData)]
   
   # get pathogen list
@@ -32,9 +32,18 @@ appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=T
   # to be uncorrelated with pathogen of interest. Social dynamics could violate this assumption.
   
   # making timeseries inference work for pathogen == 'all even if it maybe shouldn't...
-    outGroup<-setdiff(pathogens, unique(db$observedData$pathogen))
-    if (length(outGroup)==0){
-      outGroup = 'all'
+    inputPathogen <- unique(db$observedData$pathogen)
+    
+    if (inputPathogen == 'all'){
+      outGroup <- 'all'
+    } else if (inputPathogen == 'flu_positive'){
+      outGroup <- pathogens[!grepl('flu',pathogens, ignore.case = TRUE)]
+    } else if (inputPathogen == 'rsv_positive'){
+      outGroup <- pathogens[!grepl('rsv',pathogens, ignore.case = TRUE)]
+    } else if (inputPathogen == 'flu_negative'){
+      outGroup <- pathogens[grepl('flu',pathogens, ignore.case = TRUE)]
+    } else {
+      outGroup<-setdiff(pathogens, unlist(strsplit(inputPathogen,'-')))
     }
   
   queryIn <- list(
