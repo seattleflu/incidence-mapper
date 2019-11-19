@@ -39,8 +39,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   
   # construct priors
   hyper=list()
-  hyper$global <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/100, alpha = 0.01))
+  hyper$global <- list(prec = list( prior = "pc.prec", param = 1/1, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
