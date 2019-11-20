@@ -1,9 +1,4 @@
-#' @title Forecast ILI using ARIMA  
-#' September 2019
-#' Helper functions first, actual function is forecast_ILI below
-
-
-#' plotforecasts: internal function for saving plot of ILI and ILI forecast with 95%CI
+#' plotforecasts: internal function for saving plot of ILI and ILI forecast with 95\%CI
 #'
 #' @param dat ILI data to plot
 #' @param fitted_param ILI
@@ -48,10 +43,11 @@ plotforecasts<- function(dat, fitted_param , ggtitlestr = NULL , outpath = NULL)
 
 
 #' calcfc: internal function for calculating the ILI fit with no regressors
+#' 
 #' takes logit of ILI data for modeling, inverse logit is done before returning ILI estimates
 #' uses num_prior_weeks - number of points to fit for each data point in the 2018-2019 season
 #' forward estimates for num_future_weeks - number of weeks to make future ILI estimates
-#' returns ILI forward estimates for num_future_weeks- point estimate and the 95% CI upper and lower
+#' returns ILI forward estimates for num_future_weeks- point estimate and the 95\% CI upper and lower
 #'
 #' @param dat dataframe with week, and ILI as columns
 #' @param num_prior_data number of previous data points (weeks) to use to fit the ARIMA model
@@ -65,6 +61,7 @@ plotforecasts<- function(dat, fitted_param , ggtitlestr = NULL , outpath = NULL)
 #' @import boot
 #' 
 #' @return ILI_estimate - dataframe with point estimate and 95% CI upper and lower for num_future_weeks
+#' 
 calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   
   
@@ -115,11 +112,11 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   #run forecasting for each week + future forecast
   for (current_time in (num_prior_data+1):end_fc_time){
     
-    #start forecasting with 1 year of data 
+    #start forecasting with prior data
     dat_s <- slice(dat, (current_time-num_prior_data):current_time)
     
     #fit model and forecast 1 wk ahead for all weeks
-    fit <- auto.arima(dat_s$ILI) 
+    fit <- auto.arima(dat_s$ILI, stepwise=FALSE, parallel=TRUE, num.cores=8) 
     fc <- forecast(fit, h=1) #forecast 1 wk ahead
     if (current_time == nrow(dat) && !is.null(forecast_weeks)){
       fc <- forecast(fit, h=num_future_data) #forecast more weeks ahead for last time point
@@ -171,7 +168,7 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
 #'    ILI_forecast <- forecast_ILI(num_prior_data=52, num_future_weeks = 2)
 #'    
 #'    
-forecast_ILI <- function(num_prior_data=52, currentWeek = NULL){
+forecast_ILI <- function(num_prior_data=104, currentWeek = NULL){
     
   # current week being run
   if( is.null(currentWeek)){

@@ -39,8 +39,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   
   # construct priors
   hyper=list()
-  hyper$global <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/100, alpha = 0.01))
+  hyper$global <- list(prec = list( prior = "pc.prec", param = 1/1, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
@@ -138,6 +138,24 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
         
         excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'site')
+      }
+    }
+    
+    if(COLUMN %in% c('residence_regional_name')){
+      
+      inputData$residence_regional_nameRow <- match(inputData$residence_regional_name,unique(inputData$residence_regional_name))
+      
+      if('time_row' %in% names(inputData)){
+        
+        inputData$time_row_residence_regional_name <- inputData$time_row
+        
+        formula <- update(formula,  ~ . + f(residence_regional_nameRow, model='iid', hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
+                                            group = time_row_residence_regional_name, control.group=list(model="rw2")))
+        validLatentFieldColumns <- c(validLatentFieldColumns,'residence_regional_nameRow','time_row_residence_regional_name')
+      } else {
+        
+        formula <- update(formula,  ~ . + f(residence_regional_nameRow, model='iid', hyper=modelDefinition$hyper$global, replicate=replicateIdx))
+        validLatentFieldColumns <- c(validLatentFieldColumns,'residence_regional_nameRow')
       }
     }
     

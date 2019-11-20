@@ -159,6 +159,10 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   db$flu_shot[is.na(db$flu_shot)] <- 'unknown'
   db$flu_shot <- tolower(db$flu_shot)
   
+  # clean up age upper ranges
+  db$age_range_fine_upper[is.na(db$age_range_fine_upper) & (db$age >= 90)]<-90
+  db$age_range_coarse_upper[is.na(db$age_range_coarse_upper) & (db$age >= 65)]<-90
+  
   
   # run query
   # this logic will probably move to sql queries in the database instead of dplyr after....
@@ -167,15 +171,17 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
  
       #(Needed hack until higher-level shape labels are in database)
         if ( any( grepl('residence',queryList$SELECT$COLUMN) | grepl('work',queryList$SELECT$COLUMN) ) ){
-          if (! any( grepl('cra_name',queryList$SELECT$COLUMN) | grepl('neighbo',queryList$SELECT$COLUMN) ) ){
+          if (! any( grepl('regional_name',queryList$SELECT$COLUMN) | grepl('cra_name',queryList$SELECT$COLUMN) | grepl('neighbo',queryList$SELECT$COLUMN) ) ){
             shp = dbViewR::masterSpatialDB(shape_level = 'census_tract', source = 'wa_geojson')
+          } else if (any( grepl('regional_name',queryList$SELECT$COLUMN) )){
+            shp = dbViewR::masterSpatialDB(shape_level = 'census_tract', source = 'sfs_domain_geojson')
           } else {
             shp = dbViewR::masterSpatialDB(shape_level = 'census_tract', source = 'king_county_geojson')
           }
         
           # append higher-level spatial labels
           # this feature will eventually be in the database, but it's needed for now to index to pumas, cra_name, etc
-          nestedVariables <- c('cra_name','neighborhood_district_name','puma','city')
+          nestedVariables <- c('regional_name','cra_name','neighborhood_district_name','puma','city')
           
           for( COLUMN in nestedVariables){
             COLNAME <- paste0('residence_',COLUMN)
@@ -257,8 +263,8 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   
   
   # type harmonization
-    for( COLUMN in names(db)[names(db) %in% c('residence_census_tract','residence_cra_name','residence_puma','residence_neighborhood_district_name','residence_city',
-                                              'work_census_tract','work_cra_name','work_puma','work_neighborhood_district_name','work_city')]){
+    for( COLUMN in names(db)[names(db) %in% c('residence_census_tract','residence_cra_name','residence_puma','residence_neighborhood_district_name','residence_city','residence_regional_name',
+                                              'work_census_tract','work_cra_name','work_puma','work_neighborhood_district_name','work_city','work_regional_name')]){
       db[[COLUMN]] <- as.character(db[[COLUMN]])
     }
 

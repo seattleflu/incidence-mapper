@@ -25,6 +25,7 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     if ("encountered_week" %in% names(db$observedData)){
       
       weeks <- unique(sort(db$observedData$encountered_week))
+      mostRecentWeekWithData <- as.character(weeks[length(weeks)])
       
       if(is.null(minWeek)){
         minYear <- as.numeric(gsub('-W[0-9]{2}','',weeks[1]))
@@ -32,13 +33,13 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       } else {
         minYear <- as.numeric(gsub('-W[0-9]{2}','',minWeek))
       }
-      
+
       if(is.null(currentWeek)){
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',weeks[length(weeks)]))
-        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[length(weeks)] )) + (maxYear-minYear)*52 + 4 # 4 week look-ahead
+        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[length(weeks)] )) + (maxYear-minYear)*52  + 4 # 4 week look-ahead
       } else {
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',currentWeek)) 
-        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',currentWeek )) + (maxYear-minYear)*52 + 4 # 4 week look-ahead
+        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',currentWeek )) + (maxYear-minYear)*52 #+ 4 # 4 week look-ahead
       }
       
       weeks <- 1+( (seq(minWeek,maxWeek,by=1)-1) %% 52)
@@ -53,37 +54,43 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
     # age
       validColumnData$age = seq(0,90,by=1)
-      validColumnData$age_bin_fine_lower = c(0,2,seq(5,85,by=5))
-      validColumnData$age_bin_fine_upper = c(2,seq(5,90,by=5))
-      validColumnData$age_bin_coarse_lower = c(0,2,5,18,65,90)
-      validColumnData$age_bin_coarse_upper = c(2,5,18,65,90)
+      validColumnData$age_bin_fine_lower = c(0,0.08,0.5,1,seq(5,90,by=5))
+      validColumnData$age_bin_fine_upper = c(0.08,0.5,1,seq(5,90,by=5))
+      validColumnData$age_bin_coarse_lower = c(0,0.5,5,18,65)
+      validColumnData$age_bin_coarse_upper = c(0.5,5,18,65,90)
       
     
     # age bin
-    if(any(grepl('age',names(db$observedData)))) {
-      validColumnData$age_bin <- seq(0,90,by=5)
-      validColumnData$age_row <- 1:length(validColumnData$age_bin)
-    }
-      
+    # if(any(grepl('age',names(db$observedData)))) {
+    #   validColumnData$age_bin <- seq(0,90,by=5)
+    #   validColumnData$age_row <- 1:length(validColumnData$age_bin)
+    # }
+
     # geography
       validColumnData$residence_census_tract = shp$residence_census_tract
       validColumnData$residence_cra_name = sort(unique(shp$residence_cra_name)) 
       validColumnData$residence_neighborhood_district_name = sort(unique(shp$residence_neighborhood_district_name))
       validColumnData$residence_puma = sort(unique(shp$residence_puma))
       validColumnData$residence_city = sort(unique(shp$residence_city))
+      validColumnData$residence_regional_name = sort(unique(shp$residence_regional_name))
       validColumnData$work_census_tract = shp$work_census_tract
       validColumnData$work_cra_name = sort(unique(shp$work_cra_name))
       validColumnData$work_neighborhood_district_name = sort(unique(shp$work_neighborhood_district_name))
       validColumnData$work_puma = sort(unique(shp$work_puma))
       validColumnData$work_city = sort(unique(shp$work_city))
+      validColumnData$work_regional_name = sort(unique(shp$work_regional_name))
+      
       
       # NA handling
       validColumnData$residence_cra_name = validColumnData$residence_cra_name[validColumnData$residence_cra_name!='NA']
       validColumnData$residence_neighborhood_district_name = validColumnData$residence_neighborhood_district_name[validColumnData$residence_neighborhood_district_name!='NA']
       validColumnData$residence_city = validColumnData$residence_city[validColumnData$residence_city!='NA']
+      validColumnData$residence_regional_name = validColumnData$residence_regional_name[validColumnData$residence_regional_name!='NA']
       validColumnData$work_cra_name = validColumnData$work_cra_name[validColumnData$work_cra_name!='NA']
       validColumnData$work_neighborhood_district_name = validColumnData$work_neighborhood_district_name[validColumnData$work_neighborhood_district_name!='NA']
       validColumnData$work_city = validColumnData$work_city[validColumnData$work_city!='NA']
+      validColumnData$work_regional_name = validColumnData$work_regional_name[validColumnData$work_regional_name!='NA']
+      
       
     # factors (these don't get interpolated by the models, so we only want the valid levels for the dataset at hand)
       factorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('age','n','positive')) | 
@@ -96,7 +103,7 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
   
   # don't expand on nested shape variables
-    nestedVariables <- c('cra_name','neighborhood_district_name','puma','city')
+    nestedVariables <- c('cra_name','neighborhood_district_name','puma','city', 'regional_name')
 
   # expand.grid for non-nested variables
     colIdx <- ( names(validColumnData) %in% names(db$observedData) ) &  !( names(validColumnData) %in% nestedVariables) 
@@ -104,6 +111,11 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     
   # join
   db$observedData <- dplyr::left_join(tmp,db$observedData, by=names(validColumnData)[colIdx])
+
+  # order weeks  
+  if('encountered_week' %in% names(db$observedData)){
+    db$observedData$encountered_week <- factor(db$observedData$encountered_week, levels=sort(unique(db$observedData$encountered_week)), ordered = TRUE)
+  }
   
   # sample size as zero instead of NaN
   if ("n" %in% names(db$observedData)){
@@ -112,7 +124,11 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       # positives as 0 instead of NaN when positive count is total count always (eg catchments) 
       idx <- !is.na(db$observedData$positive)
       if(all(db$observedData$positive[idx]==db$observedData$n[idx])){
-        db$observedData$positive[!idx]<-0
+        if('encountered_week' %in% names(db$observedData)){
+          db$observedData$positive[!idx & (db$observedData$encountered_week <= mostRecentWeekWithData)]<-0
+        } else {
+          db$observedData$positive[!idx]<-0
+        }
       }
   }
   
@@ -123,11 +139,6 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       db$observedData[[colName]] <- shp[[colName]][match(db$observedData[[nestedVariables[nestedVariables == colName]]],as.character(shp[[nestedVariables[nestedVariables == colName]]]))]
     }
   
-  # order weeks  
-    if('encountered_week' %in% names(db$observedData)){
-      db$observedData$encountered_week <- factor(db$observedData$encountered_week, levels=sort(unique(db$observedData$encountered_week)), ordered = TRUE)
-    }
-    
   # row indices for INLA
   if(any(grepl('encountered_week',names(db$observedData)))){
     db$observedData$time_row <- validColumnData$time_row[match(db$observedData$encountered_week,validColumnData$encountered_week)]

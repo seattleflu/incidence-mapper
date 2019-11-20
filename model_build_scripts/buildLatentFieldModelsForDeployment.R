@@ -39,8 +39,9 @@ factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
 
 
 geoLevels <- list(
-                   seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
-                   wa_geojson = c('residence_puma')
+                   sfs_domain_geojson = 'residence_regional_name'#,
+                   # seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
+                   # wa_geojson = c('residence_puma')
                  )
 
 
@@ -55,12 +56,15 @@ currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
     
+    # SOURCE='sfs_domain_geojson'
+    # GEO='residence_regional_name'
+    # PATHOGEN='flu'
+    
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
     # GEO='residence_census_tract'
     # GEO='residence_puma'
     # GEO='residence_cra_name'
-    # PATHOGEN='flu'
     # PATHOGEN='all'
     # PATHOGEN='rsv'
     # PATHOGEN='other_non_flu'
@@ -69,8 +73,6 @@ for (SOURCE in names(geoLevels)){
     
     for (PATHOGEN in names(pathogenKeys)){
 
-     
-      
       queryIn <- list(
         SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
         WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
@@ -78,8 +80,10 @@ for (SOURCE in names(geoLevels)){
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
       
-      
       db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
+      
+      #if you want to add the ILI data to the db
+      db <- appendILIDataFc(db, currentWeek)
       
       # training occassionaly segfaults on but it does not appear to be deterministic...
       tries <- 0
@@ -102,7 +106,7 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$latentField) + 
                     geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-                    geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                     guides(color=FALSE, fill=FALSE) + 
                     theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
               )
