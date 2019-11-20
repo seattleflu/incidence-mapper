@@ -73,8 +73,6 @@ for (SOURCE in names(geoLevels)){
     
     for (PATHOGEN in names(pathogenKeys)){
 
-     
-      
       queryIn <- list(
         SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
         WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
@@ -83,6 +81,9 @@ for (SOURCE in names(geoLevels)){
       )
       
       db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
+      
+      #if you want to add the ILI data to the db
+      db <- appendILIDataFc(db, currentWeek)
       
       # training occassionaly segfaults on but it does not appear to be deterministic...
       tries <- 0
@@ -105,7 +106,7 @@ for (SOURCE in names(geoLevels)){
             print(
               ggplot(model$latentField) + 
                     geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-                    geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+                    # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
                     guides(color=FALSE, fill=FALSE) + 
                     theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
               )
