@@ -159,6 +159,10 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   db$flu_shot[is.na(db$flu_shot)] <- 'unknown'
   db$flu_shot <- tolower(db$flu_shot)
   
+  # clean up age upper ranges
+  db$age_range_fine_upper[is.na(db$age_range_fine_upper) & (db$age >= 90)]<-90
+  db$age_range_coarse_upper[is.na(db$age_range_coarse_upper) & (db$age >= 65)]<-90
+  
   
   # run query
   # this logic will probably move to sql queries in the database instead of dplyr after....
