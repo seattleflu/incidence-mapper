@@ -1,0 +1,409 @@
+---
+title: "Simulation for Seattle Flu Study Incidence Mapper"
+author: "Roy Burstein"
+date: "Sept 2019"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+# Notation:
+
+- $a$:  admin area
+- $c$:  catchment
+- $N$:  population
+- $p$:  pathogen
+- $-P$:  set of all pathogens other than the one of current interest
+- $s$:  surveillance site
+- $w$:  week
+- $Y'$: observed cases
+- $Y$:  true cases
+- $y$:  true incidence rate
+- $\rho$:  probability of leaving home if sick
+- $\pi$:  probability of being recorded at a surveillance site  
+
+# Overview
+
+### Problem Statement
+
+We observe $Y'_{pasw}$: the number of cases detected at a surveillance site $s$ from admin area $a$, in week $w$, with pathogen $p$, but we are ultimately interested in making some inference about $y_{paw}$, the incidence rate over time in an admin area for some pathogen $p$. Knowing $y_{paw}$ will provide partners with an up to date and localized situational awareness of ILI in the King County/Seattle Area. 
+
+#### Side note
+
+We actually get data at the individual level so we also have age and sex information (which we are ignorning, for now). One person can test positive for multiple pathogens, also one person can test positive for none of the pathogens of interest to this study. Surveillance site types vary, from childcare centers, hospitals and clinics, booths set up in various places, jail, homeless shelter, etc. It is important to note that we do not have a complete or even representative enumeration of the King County population. Representativeness is somewhat site dependent (think clinic versus UW kiosk), but the vast majority of the sampled people are sick. As a result, we basically lose hope about making estimates of absolute incidence rates, and will likely only be able to make some sort of estimate which interpretable relative to other pathogens.  
+
+### Model
+
+We can think about the observation process that this may arise from: First, a person living in area $a$ becomes infected with pathogen $p$, possibly showing symptoms. They leave home and attend a surveillance site with a probability of $\rho_{paw}$ (assuming this probability is constant over $w$ for now), with $(1-\rho_{pa})$ being the joint probability of either staying home or going out but not going to a surveillance site. Conditional on their $a$, $p$ (again assuming constant over $w$ for now), they then have some multinomial probability $\pi$ of attending a given surveillance site $s$, notated as $\pi_{pas}$. Once they have attended a site they are assumed fully observed. 
+
+Therefore we have the following observation model: $Y'_{pasw} = y_{paw}\rho_{pa}\pi_{pas}$  
+
+With ideal data, we would know, or be able to directly estimate, $\rho$ and $\pi$ in order to identify the true incidence rate. The challenge is to identify site and admin specific reporting rates. We won't want to use the raw reported incidence because those are biased by who shows up to what site from where (we wouldn't want to conclude there is an outbreak in the U District just because many of our samples are picked up at a UW Kiosk), so some type of modeling is needed.
+
+
+#### Current approach
+
+The current approach combines $\rho_{pa}\pi_{pas}$ into one value to be identified, lets call it $\nu_{pas} = \rho_{pa}\pi_{pas}$. We can think of $\nu_{pas}$ as the propensity to be surveilled at site $s$ if you live in admin $a$ (and are infected with $p$). 
+
+We currently rely on the concept of a site-admin specific 'catchment' to approximate this propensity. The catchment is defined as the total number of observed cases collected at $s$ from those living in $a$ for all pathogens other than the one in question, $c_{pas} = \sum_p^{-P}Y'_{as}$. We may also choose to use some smoothing model on $c_{pas}$ to account for statistical noise and zeroes in some admin-site combinations without data. By relying on the sum across $-P$ pathogens to construct the catchment, we are assuming that propensity to be surveilled at $s$, if one is from $a$, is consistent across pathogens, allowing us to exploit extra information available from other pathogens collected in the data.
+
+We then fit the following statistical model to the data for each $p$:
+
+$$ Y' \sim poisson(\lambda_{asw}) $$
+$$ log(\lambda_{asw}) = \beta_0 + \beta_1C_{as} + \beta_2Site + Week + Week_a + U_a $$
+$$ Week \sim RW2(\sigma_1^2 )$$
+$$ Week_a  \sim RW2(\sigma_{2a}^2 )$$
+$$ U_a  \sim Normal(\sigma_3^2 )$$
+
+Where $\beta_0$ is an intercept, $\beta_1$ is an adjustment factor for the catchment effect, and \textbf{$\beta_2$} are site specific fixed effects. Together, the first three terms $(\beta_0 + \beta_1C_{as} + \beta_2Site)$ represent what we are calling the 'propensity offset'. These collective terms are meant to control for the biased sampling.  
+
+
+The remaining linear terms (in this case: $(Week + Week_a + U_a)$, but could also include spatial random effects for example) represents the 'incidence intensity' at each admin area for each week. The current assumption (or hope) is that this intensity is proportional to incidence by some constant across admins. 
+
+
+### Some random thoughts
+
+It is not intuitively clear to me that this approach should work, that there should be an identifiable split between $\nu_{as} = \beta_0 + \beta_1C_{as} + \beta_2Site$ and $y_{paw} = Week + Week_a + U_a$. 
+
+I also wonder if we are in danger of controlling out something real, for example what if there is some dual outbreak of $p1$ and $p2$ in homeless population residing downtown, who are only showing at at shelters as their site? If $p1$ figures into the $c$ of $p2$, then won't the increase in cases appear in the propensity offset? 
+
+What if there is one pathogen outbreak in an admin area, making the catchment really large for all other pathogens appearing there, will those other epidemics appear small in comparison?  
+
+In the following, I will set up a simple simulation to test this approach:  
+
+
+# Simulation
+
+```{r wrap-hook, echo=F, results='hide', message=F, warning=F}
+library(knitr)
+hook_output = knit_hooks$get('output')
+knit_hooks$set(output = function(x, options) {
+  # this hook is used only when the linewidth option is not NULL
+  if (!is.null(n <- options$linewidth)) {
+    x = knitr:::split_lines(x)
+    # any lines wider than n should be wrapped
+    if (any(nchar(x) > n)) x = strwrap(x, width = n)
+    x = paste(x, collapse = '\n')
+  }
+  hook_output(x, options)
+})
+```
+
+```{r loadlib, echo=T, results='hide', message=F, warning=F, linewidth=60}
+library(data.table)
+library(magrittr)
+library(ggplot2)
+library(INLA)
+library(gridExtra)
+library(grid)
+
+set.seed(123457)
+```
+
+
+We'll start by setting up some parameters for the simulation including the number of amin areas, pathogens, and collection site-types:
+
+
+```{r params, echo=T, results='hide', message=F, warning=F, linewidth=60}
+
+# number of admin areas
+n_admins <- 5
+
+# number of pathogens tracked
+n_pathogens <- 5
+
+# number of site types
+n_sitetypes <- 5
+
+```
+
+
+For now, we will assume that $\pi$ and $\rho$ only vary across $a$ and $s$. Our catchment approach depends on this. Later we can test the sensitivity of the approach to the violation of this assumption.
+
+
+```{r obsproc_params, echo=T,  message=F, warning=F, linewidth=30}
+
+# make a rho and pi parameter table
+obsproc_params <- expand.grid(admin    = paste0('AD_',1:n_admins),
+                              site_type = paste0('SITE_',1:n_sitetypes)) %>% 
+  data.table()
+
+# [[for now]] assume rho is equal everywhere at 0.25 
+#  (i.e. 25% will leave home and be surveilled)
+obsproc_params[, rho := 0.25]
+
+# assign multinomial probabilities for pi (dont need to be normalized yet)
+ obsproc_params[, pi := rbeta(.N, 2, 6)] # rbinom(.N, 1, 0.9) * 
+
+# Or we make it such that some sites wont show up at all (binomial) for certain admins, and others are much more likely (bimodal)
+#betas     <- rbeta(nrow(obsproc_params),2,2)
+#bimodside <- rbinom(nrow(obsproc_params),1,0.25)
+#obsproc_params[, pi := (rbinom(.N, 1, 0.6) * ((betas+4)^bimodside+betas^(1-bimodside)))/6 ]
+
+# view the top few rows
+hist(obsproc_params$pi)
+head(obsproc_params)
+
+```
+
+
+Now we will simulate, in a really simple way, the epidemics themselves for each admin-pathogen combo  using Gaussian curves.
+
+```{r sim_epi, echo=T,  message=F, warning=F, linewidth=60}
+
+# set up param table showing overall number of cases per pathogen for the season
+params <- expand.grid(admin    = paste0('AD_',1:n_admins),
+                      pathogen = paste0('PATH_',letters[1:n_pathogens])) %>% 
+  data.table()
+
+
+# for now, we assume cases are independent
+# make them zero inflated but if have cases some random number of cases
+params[, totalcases := rbinom(.N, 1, 0.9) * rpois(.N, exp(rnorm(.N, 5, 1)))]
+
+
+# Simulate overall incidence over the season for each pathogen and admin area
+# each pathogen will have its own epi curve (simple gaussian for now, with slightly different moments)
+# that will vary slightly by admin area
+d <- data.table()
+for(r in 1:nrow(params)) {
+    
+  Nc  <- params$totalcases[r] 
+    
+  if(Nc != 0){
+      
+    # simulate the week in which the cases appear
+    peak <- abs(round(rnorm(1, 14, 3))) 
+    stdv <- abs(round(rnorm(1, 4, 1))) 
+    
+    week <- ceiling(abs(round(rnorm(Nc, mean = peak, sd = stdv)))) 
+    d    <- rbind(d, data.table(admin    = params$admin[r], 
+                                pathogen = params$pathogen[r], 
+                                week     = week))
+     
+  }
+}
+
+# d is now a table wherein all true cases are assigned an admin-week
+# here is a plot for one admin area:
+ggplot(d[admin == 'AD_1', .(cases = .N), by = .(pathogen, week)], aes(x=week,y=cases,color=pathogen)) + 
+  geom_line() + theme_bw()
+
+```
+
+
+For each case that we defined above, we simulate the observation process:
+
+
+```{r sim_obsproc, echo=T,  message=F, warning=F, linewidth=60}
+
+# loop through each person, simulate them leaving home and then their site (slow - TODO speed this up)
+for(i in 1:nrow(d)){
+  
+  # merge on needed observation process parameters
+  tmp <- d[i,]
+  tmp <- merge(tmp, obsproc_params, by = c('admin'))
+  
+  # did they leave home and go to a site? If so MLNM which site they went to
+  if(rbinom(1,1,tmp$rho[1])== 1){
+    d[i, observed  := 1]
+    d[i, sitetype := as.character(tmp$site_type[t(rmultinom(1,1,tmp$pi))==1])]
+  } else {
+    d[i, observed := 0]
+  }
+  rm(tmp)
+}
+
+# save the truth (dtrue) and the observed data tables
+dtrue <- d
+dobs  <- dtrue[observed==1]
+
+```
+
+
+We can take a look at the data we simulated now:
+
+```{r plot1, echo=T,  message=F, warning=F, linewidth=60}
+ggplot(dobs, aes(week,fill=pathogen)) + geom_histogram() + ylab('Observed Count') +
+    facet_grid(admin~sitetype) + theme_bw()
+
+```
+
+```{r plot2, echo=T,  message=F, warning=F, linewidth=60}
+
+ggplot(dtrue, aes(week,fill=pathogen)) + geom_histogram()  +
+    facet_grid(admin~observed) + theme_bw() + ggtitle('Unobserved vs observed cases')
+
+```
+
+
+We'll define the catchment $c_{pas}$ variable and aggregate observed cases to a unit of analysis at $Y'_{pasw}$
+
+
+```{r catch, echo=T,  results='hide', message=F, warning=F, linewidth=60}
+
+# get catchment as currently defined (all pathogens by Admin, site other than the pathogen in question)
+catch <- data.table()
+for(p in unique(dobs$pathogen)){
+  tmp <- dobs[pathogen != p]
+  if(nrow(tmp)>0){
+    tmp <- tmp[, .(catchment = .N+0.001), by = .(admin, sitetype)]
+    tmp$pathogen <- p
+    catch <- rbind(catch, tmp)
+  } 
+}
+
+# who has the largest catchments?
+catch[catchment>quantile(catch$catchment,0.95)]
+
+# expand out and fill in zeroes using a simple Random effect
+# This could lead to problems, since avg over S/A could miss a whole outbreak if its in one S/A?
+expp <-  expand.grid(admin    = paste0('AD_',1:n_admins),
+                     pathogen = paste0('PATH_',letters[1:n_pathogens]),
+                     sitetype = paste0('SITE_',1:n_sitetypes)) %>% data.table()
+catch <- merge(expp, catch, by = c('admin','pathogen','sitetype'), all.x=T)
+catch[, id := 1:.N]
+catch[is.na(catchment),     catchment := 0]
+m <- inla(formula = catchment ~ f(id, model = 'iid'), 
+          data = catch, family = 'poisson',control.predictor = list(compute=TRUE,link=1))
+catch$catchment <- exp(m$summary.linear.predictor$mean)
+
+# aggregate data by week admin site pathogen for the mode
+dagg <- dobs[, .(cases = .N), by = .(admin,sitetype,pathogen,week)]
+
+# exapnd the aggregated data for all possible combos
+expanded <-  expand.grid(admin    = paste0('AD_',1:n_admins),
+                         pathogen = paste0('PATH_',letters[1:n_pathogens]),
+                         sitetype = paste0('SITE_',1:n_sitetypes),
+                         week     = 1:max(d$week)) %>% data.table()
+dagg <- merge(expanded, dagg, by = c('admin', 'pathogen', 'sitetype', 'week'), all.x = TRUE)
+
+# add on catchments
+dagg <- merge(dagg, catch, by = c('admin','sitetype','pathogen'), all.x = T)
+dagg[is.na(cases),     cases := 0]
+
+# Mike treats catchments this way
+dagg[, catchment := log(catchment)-mean(log(catchment))]
+
+```
+
+
+
+We'll fit the model:
+
+```{r runinla, echo=T,  results='hide', message=F, warning=F, linewidth=60}
+
+## model one pathogen at a time.
+path_to_model <- 'PATH_a'
+
+# subset
+inputData <- dagg[pathogen == path_to_model]
+
+# priors ( note, currently just using defaults )
+hyper <- list()
+hyper$local  <- list(prec = list( prior = "pc.prec", param = 1/100, alpha = 0.01))
+
+# time as a latent fied
+inputData$time_row_rw2 <- inputData$week
+inputData$time_row_IID <- inputData$week
+inputData$admin_row <- match(inputData$admin,unique(inputData$admin))
+inputData$time_row_admin <- inputData$week
+outcome <- inputData$cases
+
+# initialize formula  
+formula <- as.formula('cases ~ 1  + sitetype + catchment') # sitetype:admin + catchment:admin
+
+# DIAGONAL: https://groups.google.com/forum/#!topic/r-inla-discussion-group/WqnLwPP6Ges
+formula <- update(formula,  ~ . + f(admin_row, model = 'iid', graph = NULL , diagonal=5e-09, 
+                                     group = time_row_admin, control.group=list(model="rw2")))
+formula <- update(formula,  ~ . + f(time_row_rw2, model='rw2', diagonal=5e-09)) # + hyper= hyper$time
+                 # f(time_row_IID, model='iid', hyper=hyper$local,  constr = TRUE) )
+# Need a closer look at priors here, the defaults are doing much better
+
+#fit
+model <- INLA::inla(formula           = formula,
+                    family            = 'poisson', 
+                    data              = inputData, 
+                    control.predictor = list(compute=TRUE,link=1),
+                    control.compute   = list(config=TRUE,dic=TRUE),
+                    verbose           = FALSE,
+                    keep              = FALSE,
+                    control.inla      = list(int.strategy="auto", strategy = "gaussian", cmin=0))
+```
+
+
+```{r inlaout, echo=T, message=F, warning=F, linewidth=60}
+print(summary(model))
+```
+
+
+
+Pull out some of the output and see how they compare to truth:
+
+
+```{r inlaout2, echo=T, message=F, warning=F, linewidth=60}
+
+# admin_row will be n_admin time n_weeks long. time_row_rw2 will be n_weeks long   
+out <- data.table(intensity = model$summary.random$admin_row$mean +rep(model$summary.random$time_row_rw2$mean, each=n_admins),
+                  admin     = rep( paste0('AD_',1:n_admins), max(dagg$week)),
+                  week      = rep(1:max(dagg$week), each=n_admins))
+out <- merge(out,  dobs[pathogen == path_to_model, .(observed_cases = .N), by = .(admin, week)], by = c('admin','week'), all.x = TRUE)
+out <- merge(out, dtrue[pathogen == path_to_model, .(true_cases     = .N), by = .(admin, week)], by = c('admin','week'), all.x = TRUE)
+
+out[is.na(observed_cases), observed_cases := 0]
+out[is.na(true_cases),     true_cases := 0]
+
+# do the other fixed effects variables equal rho*N?
+
+# rank admins at each time point?
+rank <- copy(out)[order(week,intensity)]
+rank[, intensity_rank := 1:.N, by = week]
+rank <- rank[order(week,observed_cases)]
+rank[, observed_cases_rank := 1:.N, by = week]
+rank <- rank[order(week,true_cases)]
+rank[, true_cases_rank := 1:.N, by = week]
+
+
+# plot smoothed time series
+g1=ggplot(out, aes(y=exp(intensity), x=week, color=admin, group=admin)) + 
+  geom_line() + theme_bw() + theme(legend.position = 'none')
+g2=ggplot(out, aes(y=true_cases, x=week, color=admin, group=admin)) + 
+  geom_line() + theme_bw() + theme(legend.position = 'none')
+g3=ggplot(out, aes(y=observed_cases, x=week, color=admin, group=admin)) + 
+  geom_line() + theme_bw() + theme(legend.position = 'none')
+g4=ggplot(out, aes(x=log(true_cases), y=intensity, color=admin)) + 
+  geom_point() + theme_bw() + theme(legend.position = 'none')
+g5=ggplot(out, aes(x=log(observed_cases), y=intensity, color=admin)) + 
+  geom_point() + theme_bw() + theme(legend.position = 'none')
+g6 = ggplot(rank[week < 25], aes(week,intensity_rank,group=admin,color=admin),alpha=.4) + 
+  geom_line() + theme_bw() + 
+  theme(legend.position = 'none') + ylab('ADMIN RANK') +
+  geom_line(aes(week,true_cases_rank+.1,group=admin,color=admin), lty = 'dashed')
+grid.arrange(g1,g6,g2,g3,g4,g5, layout_matrix = rbind(c(1,2),c(3,4),c(5,6)))
+
+
+```
+
+
+In the plot above we compare results from the model of PATH_a with simulated truth. Each color is an admin area. The top left plot shows the overall modelled 'intensity' curves over the season. The top right plot shows the modelled rank intensitities (solid) alongside true admin ranks in incident cases (dashed). The second row of plots shows true and observed cases, respectively. The bottom row is a scatterplot comparing true cases and intensity and observed cases and intensity, each dot representing an admin-week.  
+
+It appears there is somewhat a more linear relationship with true cases than with observed cases (see the R-squared below). Though, observed cases just as good a predictor of of true cases as is intensity in this case. 
+
+There are also signs of trouble: I recommend running through this simulation a few times, looking at different pathogens or setting different seeds, and we can find cases where in fact the truth is not well-predicted. There is also a sign of separation by admin area in the proportionality of the intensity-truecases relationship. 
+
+
+```{r inlaout3, echo=T, message=F, warning=F, linewidth=60}
+summary(lm(exp(intensity) ~ true_cases    , data = out[observed_cases!=0]))$r.squared 
+summary(lm(exp(intensity) ~ observed_cases, data = out[observed_cases!=0]))$r.squared
+
+summary(lm(true_cases ~ observed_cases, data = out[observed_cases!=0]))$r.squared
+
+```
+
+# Next Steps
+
+* Summarize findings across many simulations
+* Understand the types of scenarios where this works and fails by tweak some of the observation process parameters. Which assumptions do we expect to violate in reality?
+* Model tweaks? What about a site-admin interaction in the offset component?
+
