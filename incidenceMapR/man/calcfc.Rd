@@ -2,11 +2,7 @@
 % Please edit documentation in R/forecast_ILI.R
 \name{calcfc}
 \alias{calcfc}
-\title{calcfc: internal function for calculating the ILI fit with no regressors
-takes logit of ILI data for modeling, inverse logit is done before returning ILI estimates
-uses num_prior_weeks - number of points to fit for each data point in the 2018-2019 season
-forward estimates for num_future_weeks - number of weeks to make future ILI estimates
-returns ILI forward estimates for num_future_weeks- point estimate and the 95% CI upper and lower}
+\title{calcfc: internal function for calculating the ILI fit with no regressors}
 \usage{
 calcfc(dat, num_prior_data = 52, currentWeek = currentWeek)
 }
@@ -21,9 +17,8 @@ calcfc(dat, num_prior_data = 52, currentWeek = currentWeek)
 ILI_estimate - dataframe with point estimate and 95% CI upper and lower for num_future_weeks
 }
 \description{
-calcfc: internal function for calculating the ILI fit with no regressors
 takes logit of ILI data for modeling, inverse logit is done before returning ILI estimates
 uses num_prior_weeks - number of points to fit for each data point in the 2018-2019 season
 forward estimates for num_future_weeks - number of weeks to make future ILI estimates
-returns ILI forward estimates for num_future_weeks- point estimate and the 95% CI upper and lower
+returns ILI forward estimates for num_future_weeks- point estimate and the 95\% CI upper and lower
 }

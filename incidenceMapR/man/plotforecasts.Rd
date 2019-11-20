@@ -2,10 +2,7 @@
 % Please edit documentation in R/forecast_ILI.R
 \name{plotforecasts}
 \alias{plotforecasts}
-\title{Forecast ILI using ARIMA  
-September 2019
-Helper functions first, actual function is forecast_ILI below
-plotforecasts: internal function for saving plot of ILI and ILI forecast with 95%CI}
+\title{plotforecasts: internal function for saving plot of ILI and ILI forecast with 95\%CI}
 \usage{
 plotforecasts(dat, fitted_param, ggtitlestr = NULL, outpath = NULL)
 }
@@ -19,10 +16,7 @@ plotforecasts(dat, fitted_param, ggtitlestr = NULL, outpath = NULL)
 \item{outpath}{where to save}
 }
 \description{
-Forecast ILI using ARIMA  
-September 2019
-Helper functions first, actual function is forecast_ILI below
-plotforecasts: internal function for saving plot of ILI and ILI forecast with 95%CI
+plotforecasts: internal function for saving plot of ILI and ILI forecast with 95\%CI
 }
 \examples{
 plot ILI data and forecast

@@ -1,9 +1,4 @@
-#' @title Forecast ILI using ARIMA  
-#' September 2019
-#' Helper functions first, actual function is forecast_ILI below
-
-
-#' plotforecasts: internal function for saving plot of ILI and ILI forecast with 95%CI
+#' plotforecasts: internal function for saving plot of ILI and ILI forecast with 95\%CI
 #'
 #' @param dat ILI data to plot
 #' @param fitted_param ILI
@@ -48,10 +43,11 @@ plotforecasts<- function(dat, fitted_param , ggtitlestr = NULL , outpath = NULL)
 
 
 #' calcfc: internal function for calculating the ILI fit with no regressors
+#' 
 #' takes logit of ILI data for modeling, inverse logit is done before returning ILI estimates
 #' uses num_prior_weeks - number of points to fit for each data point in the 2018-2019 season
 #' forward estimates for num_future_weeks - number of weeks to make future ILI estimates
-#' returns ILI forward estimates for num_future_weeks- point estimate and the 95% CI upper and lower
+#' returns ILI forward estimates for num_future_weeks- point estimate and the 95\% CI upper and lower
 #'
 #' @param dat dataframe with week, and ILI as columns
 #' @param num_prior_data number of previous data points (weeks) to use to fit the ARIMA model
@@ -65,6 +61,7 @@ plotforecasts<- function(dat, fitted_param , ggtitlestr = NULL , outpath = NULL)
 #' @import boot
 #' 
 #' @return ILI_estimate - dataframe with point estimate and 95% CI upper and lower for num_future_weeks
+#' 
 calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   
   
