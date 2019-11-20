@@ -112,11 +112,11 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   #run forecasting for each week + future forecast
   for (current_time in (num_prior_data+1):end_fc_time){
     
-    #start forecasting with 1 year of data 
+    #start forecasting with prior data
     dat_s <- slice(dat, (current_time-num_prior_data):current_time)
     
     #fit model and forecast 1 wk ahead for all weeks
-    fit <- auto.arima(dat_s$ILI) 
+    fit <- auto.arima(dat_s$ILI, stepwise=FALSE, parallel=TRUE, num.cores=8) 
     fc <- forecast(fit, h=1) #forecast 1 wk ahead
     if (current_time == nrow(dat) && !is.null(forecast_weeks)){
       fc <- forecast(fit, h=num_future_data) #forecast more weeks ahead for last time point
@@ -168,7 +168,7 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
 #'    ILI_forecast <- forecast_ILI(num_prior_data=52, num_future_weeks = 2)
 #'    
 #'    
-forecast_ILI <- function(num_prior_data=52, currentWeek = NULL){
+forecast_ILI <- function(num_prior_data=104, currentWeek = NULL){
     
   # current week being run
   if( is.null(currentWeek)){

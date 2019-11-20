@@ -4,7 +4,7 @@
 \alias{forecast_ILI}
 \title{forecast_ILI: function to extend CDC ILI data to desired week via ARIMA forecast}
 \usage{
-forecast_ILI(num_prior_data = 52, currentWeek = NULL)
+forecast_ILI(num_prior_data = 104, currentWeek = NULL)
 }
 \arguments{
 \item{num_prior_data}{number of previous data points to use to fit the ARIMA model}
