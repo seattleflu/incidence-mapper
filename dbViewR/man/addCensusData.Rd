@@ -5,8 +5,8 @@
 \title{addCensusData: function for fetching census data and merging it with input dataset}
 \usage{
 addCensusData(db = dbViewR::selectFromDB(), geography = "tract",
-  variables, year, state = "WA", county = "King",
-  source = "decennial", credentials_path = "/home/rstudio/seattle_flu")
+  variables, year, state = "WA", county = NULL, source = "acs5",
+  credentials_path = "/home/seattle_flu")
 }
 \arguments{
 \item{db}{tibble with valid column names for INLA model}

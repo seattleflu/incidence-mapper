@@ -103,7 +103,8 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
   
   # don't expand on nested shape variables
-    nestedVariables <- c('cra_name','neighborhood_district_name','puma','city', 'regional_name')
+    nestedVariables <- c('residence_cra_name','residence_neighborhood_district_name','residence_puma','residence_city', 'residence_regional_name',
+                         'work_cra_name','work_name','work_puma','work_city', 'work_regional_name')
 
   # expand.grid for non-nested variables
     colIdx <- ( names(validColumnData) %in% names(db$observedData) ) &  !( names(validColumnData) %in% nestedVariables) 
