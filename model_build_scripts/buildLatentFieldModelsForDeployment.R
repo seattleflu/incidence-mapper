@@ -1,6 +1,10 @@
 # buildModelsForDeployment.R
 # this script (and similar others?) controls standardized database queries and model training for web deployment
 
+
+## MUST FIX PROBLEM WITH NEW SITES ADDED THIS YEAR!
+## SOMETHING ELSE MAY BE BROKEN! Diagnostic plots look bad.
+
 library(dbViewR)
 library(incidenceMapR)
 library(modelServR)
@@ -39,7 +43,7 @@ factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
 
 
 geoLevels <- list(
-                   sfs_domain_geojson = 'residence_regional_name'#,
+                   sfs_domain_geojson = 'residence_regional_name'#,giot 
                    # seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
                    # wa_geojson = c('residence_puma')
                  )
@@ -74,9 +78,9 @@ for (SOURCE in names(geoLevels)){
     for (PATHOGEN in names(pathogenKeys)){
 
       queryIn <- list(
-        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
+        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),#,'age_range_coarse_upper')),
         WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
-        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),
+        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),#,'age_range_coarse_upper')),
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
       
