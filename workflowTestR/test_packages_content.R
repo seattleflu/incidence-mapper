@@ -16,7 +16,7 @@ test_that("package:dbViewR content", {
 
 ls("package:incidenceMapR")
 test_that("package:incidenceMapR content", {
-  expect_setequal(ls("package:incidenceMapR"), c("appendCatchmentModel", "constructAdjacencyNetwork", "effectsModel", "fluVaxEfficacyModel", "forecast_ILI", "latentFieldModel", "modelTrainR", "plotforecasts" , "smoothModel" ))
+  expect_setequal(ls("package:incidenceMapR"), c("appendCatchmentModel", "appendILIDataFc", "constructAdjacencyNetwork", "effectsModel", "fluVaxEfficacyModel", "forecast_ILI", "latentFieldModel", "modelTrainR", "plotforecasts" , "smoothModel" ))
 })
 
 ls("package:modelServR")
