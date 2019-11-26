@@ -134,13 +134,21 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
       }
       # site-location interaction
       # COMMENTED CODE BELOW ALMOST CERTAINLY DOESN'T WORK!  PLACEHOLDER FOR ISSUE #125.
-      # if('residence_regional_name' %in% names(inputData)){
-      #   inputData$site_region_regionIdx <- inputData$residence_regional_nameRow
-      #   inputData$site_region_siteIdx <- inputData$site_row_iid
-      #   
-      #   formula <- update(formula,  ~ . + f(site_region_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
-      #                                       group = site_region_regionIdx, control.group=list(model="iid")))
-      # }
+      if('residence_regional_name' %in% names(inputData)){
+        inputData$site_region_regionIdx <- inputData$residence_regional_nameRow
+        inputData$site_region_siteIdx <- inputData$site_row_iid
+
+        if(exists('shp')){
+          neighborGraph <- constructAdjacencyNetwork(shp) 
+
+          formula <- update(formula,  ~ . + f(site_region_siteIdx, model='bym2', graph=modelDefinition$neighborGraph, diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
+                                              group = site_region_regionIdx, control.group=list(model="iid")))
+          
+        } else {
+          formula <- update(formula,  ~ . + f(site_region_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
+                                              group = site_region_regionIdx, control.group=list(model="iid")))
+        }
+      }
     }
     
     if(COLUMN %in% c('residence_regional_name')){
