@@ -6,7 +6,7 @@
 \usage{
 addCensusData(db = dbViewR::selectFromDB(), geography = "tract",
   variables, year, state = "WA", county = NULL, source = "acs5",
-  credentials_path = "/home/seattle_flu")
+  credentials_path = "/home/rstudio/seattle_flu")
 }
 \arguments{
 \item{db}{tibble with valid column names for INLA model}

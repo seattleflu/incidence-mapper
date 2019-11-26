@@ -59,11 +59,6 @@ appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=T
   catchmentDb$observedData$positive[is.na(catchmentDb$observedData$positive)]<-0
   
   catchmentDb <- expandDB( catchmentDb, shp=shp )
-  
-  
-  # at some point, we maybe should check if the catchment map is already saved, 
-  # although this is a cheap computation relative to everything else, so that may never matter
-  
   catchmentModelDefinition <- smoothModel(db=catchmentDb, shp=shp)
   catchmentModel <- modelTrainR(catchmentModelDefinition)
   
