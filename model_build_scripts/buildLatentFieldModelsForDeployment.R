@@ -1,10 +1,6 @@
 # buildModelsForDeployment.R
 # this script (and similar others?) controls standardized database queries and model training for web deployment
 
-
-## MUST FIX PROBLEM WITH NEW SITES ADDED THIS YEAR!
-## SOMETHING ELSE MAY BE BROKEN! Diagnostic plots look bad.
-
 library(dbViewR)
 library(incidenceMapR)
 library(modelServR)
@@ -38,17 +34,19 @@ fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 pathogenKeys <- list(all='all', flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')))
 
 
-factors   <- c('site_type','sex','flu_shot')#,'age_range_fine_upper')
-# factors   <- c('site','sex','flu_shot')#,'age_range_fine_upper') # site overwhelms ram....
+factors   <- c('site_type','sex','age_range_coarse_upper','flu_shot')
 
 
 geoLevels <- list(
-                   sfs_domain_geojson = 'residence_regional_name'#,giot 
+                   sfs_domain_geojson = 'residence_regional_name'#,
                    # seattle_geojson = c('residence_puma','residence_neighborhood_district_name','residence_cra_name'), #,'residence_census_tract'),
                    # wa_geojson = c('residence_puma')
                  )
 
+siteTypes <- c('childrensHospital','clinic','collegeCampus','childrensClinic','port','retrospective','workplace','publicSpace','self-test')
 
+
+# currentWeek <- '2019-W25'
 currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 
 
@@ -60,9 +58,9 @@ currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
     
-    # SOURCE='sfs_domain_geojson'
-    # GEO='residence_regional_name'
-    # PATHOGEN='flu'
+    SOURCE='sfs_domain_geojson'
+    GEO='residence_regional_name'
+    PATHOGEN='flu'
     
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
@@ -78,16 +76,18 @@ for (SOURCE in names(geoLevels)){
     for (PATHOGEN in names(pathogenKeys)){
 
       queryIn <- list(
-        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),#,'age_range_coarse_upper')),
+        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
         WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
-        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),#,'age_range_coarse_upper')),
+        WHERE    =list(COLUMN='site_type', IN=siteTypes),
+        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
       
       db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
       
       #if you want to add the ILI data to the db
-      db <- appendILIDataFc(db, currentWeek)
+      # latentFieldModel can't handle this correctly right now
+      # db <- appendILIDataFc(db, currentWeek)
       
       # training occassionaly segfaults on but it does not appear to be deterministic...
       tries <- 0
