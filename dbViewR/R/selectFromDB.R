@@ -153,7 +153,7 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   db <- db %>% filter( !(sample %in% dropSampleList & db$pathogen %in% c("EV_pan")))
   
   # filter out controls
-  db <- db %>% filter( !(pathogen %in% c('Hs04930436_g1','Ac00010014_a1')))
+  db <- db %>% filter( !(pathogen %in% c('Hs04930436_g1','Ac00010014_a1','Xeno_Xeno_Ac00010014_a1','Rnase P_Rnase P_Hs04930436_g1')))
   
   # format flu_shot NA
   db$flu_shot[is.na(db$flu_shot)] <- 'unknown'
