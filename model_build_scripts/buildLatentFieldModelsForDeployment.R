@@ -31,7 +31,8 @@ fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 #                   ),
 #                   tmp2)
 
-pathogenKeys <- list(all='all', flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')))
+pathogenKeys <- list(all='all', flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')),
+                     rsv = c('RSVA','RSVB'))
 
 
 factors   <- c('site_type','sex','age_range_coarse_upper','flu_shot')
@@ -46,8 +47,8 @@ geoLevels <- list(
 siteTypes <- c('childrensHospital','clinic','collegeCampus','childrensClinic','port','retrospective','workplace','publicSpace','self-test')
 
 
-# currentWeek <- '2019-W25'
-currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
+currentWeek <- '2019-W25'
+# currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 
 
 #####################################
@@ -58,9 +59,9 @@ currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
     
-    SOURCE='sfs_domain_geojson'
-    GEO='residence_regional_name'
-    PATHOGEN='flu'
+    # SOURCE='sfs_domain_geojson'
+    # GEO='residence_regional_name'
+    # PATHOGEN='flu'
     
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
@@ -123,7 +124,8 @@ for (SOURCE in names(geoLevels)){
             #   theme(axis.text.x = element_text(angle = 90, hjust = 1))
             # 
             
-            saveModel(model, storeRDS=FALSE)
+            # saveModel(model, storeRDS=FALSE)
+            saveModel(model, storeRDS=TRUE)
             
             success<-1
             

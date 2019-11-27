@@ -118,13 +118,13 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
     
     if(COLUMN == 'age_row'){
 
-      if (any(grepl('age_range_coarse',inputData))) {
+      if (any(grepl('age_range_coarse',names(inputData)))) {
         
         inputData$age_row_iid <- inputData$age_row
   
         formula <- update(formula,  ~ . + f(age_row_iid, model='iid', hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
        
-      } else if (any(grepl('age_range_fine',inputData))) {
+      } else if (any(grepl('age_range_fine',names(inputData)))) {
         
         inputData$age_row_rw2 <- inputData$age_row
         
@@ -150,12 +150,12 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         inputData$site_age_ageIdx <- inputData$age_row
         inputData$site_age_siteIdx <- inputData$site_row_iid
         
-        if (any(grepl('age_range_coarse',inputData))) {
+        if (any(grepl('age_range_coarse',names(inputData)))) {
           
           formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
                                               group = site_age_ageIdx, control.group=list(model="iid")))
 
-        } else if (any(grepl('age_range_fine',inputData))) {
+        } else if (any(grepl('age_range_fine',names(inputData)))) {
           
           formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
                                               group = site_age_ageIdx, control.group=list(model="rw1")))
