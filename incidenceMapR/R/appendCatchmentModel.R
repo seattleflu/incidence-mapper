@@ -49,6 +49,7 @@ appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=T
   queryIn <- list(
     SELECT   =list(COLUMN=c('pathogen','site_type',geo)),
     WHERE    =list(COLUMN=c('pathogen'), IN = outGroup),
+    WHERE    =list(COLUMN='site_type', IN = unique(db$observedData$site_type)),
     GROUP_BY =list(COLUMN=c('site_type',geo)),
     SUMMARIZE=list(COLUMN='site_type', IN= 'all')
   )
