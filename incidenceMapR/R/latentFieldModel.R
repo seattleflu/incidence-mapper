@@ -40,9 +40,9 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # construct priors
   hyper=list()
   hyper$global <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
-  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
+  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e-2, alpha = 0.01))
   
@@ -178,7 +178,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         inputData$time_row_residence_regional_name <- inputData$time_row
         
         formula <- update(formula,  ~ . + f(residence_regional_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
-                                            group = time_row_residence_regional_name, control.group=list(model="rw2")))
+                                            group = time_row_residence_regional_name, control.group=list(model="rw1")))
         validLatentFieldColumns <- c(validLatentFieldColumns,'residence_regional_nameRow','time_row_residence_regional_name')
       } else {
         
@@ -196,7 +196,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         inputData$time_row_residence_puma <- inputData$time_row
         
         formula <- update(formula,  ~ . + f(residence_pumaRow, model='iid', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
-                                            group = time_row_residence_puma, control.group=list(model="rw2")))
+                                            group = time_row_residence_puma, control.group=list(model="rw1")))
         validLatentFieldColumns <- c(validLatentFieldColumns,'residence_pumaRow','time_row_residence_puma')
       } else {
         
@@ -214,7 +214,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         inputData$time_row_residence_cra_name <- inputData$time_row
         
         formula <- update(formula,  ~ . + f(residence_cra_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
-                                            group = time_row_residence_cra_name, control.group=list(model="rw2")))
+                                            group = time_row_residence_cra_name, control.group=list(model="rw1")))
         validLatentFieldColumns <- c(validLatentFieldColumns,'residence_cra_nameRow','time_row_residence_cra_name')
       } else {
         
@@ -232,7 +232,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         inputData$time_row_residence_neighborhood_district_name <- inputData$time_row
         
         formula <- update(formula,  ~ . + f(residence_neighborhood_district_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
-                                            group = time_row_residence_neighborhood_district_name, control.group=list(model="rw2")))
+                                            group = time_row_residence_neighborhood_district_name, control.group=list(model="rw1")))
         validLatentFieldColumns <- c(validLatentFieldColumns,'residence_neighborhood_district_nameRow','time_row_residence_neighborhood_district_name')
       } else {
         
@@ -252,7 +252,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
           inputData$time_row_residence_census_tract <- inputData$time_row
           
           formula <- update(formula,  ~ . + f(residence_census_tractRow, model='besag', diagonal=1e-3, graph=modelDefinition$neighborGraph, constr = TRUE, hyper=modelDefinition$hyper$local, replicate=replicateIdx,
-                                              group = time_row_residence_census_tract, control.group=list(model="rw2")))
+                                              group = time_row_residence_census_tract, control.group=list(model="rw1")))
           validLatentFieldColumns <- c(validLatentFieldColumns,'residence_census_tractRow','time_row_residence_census_tract')
         } else {
           formula <- update(formula,  ~ . + f(residence_census_tractRow, model='bym2', diagonal=1e-3, graph=modelDefinition$neighborGraph, constr = TRUE, hyper=modelDefinition$hyper$local, replicate=replicateIdx))
@@ -267,7 +267,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
           inputData$time_row_residence_census_tract <- inputData$time_row
           
           formula <- update(formula,  ~ . + f(residence_census_tractRow, model='iid', diagonal=1e-3, graph=modelDefinition$neighborGraph, hyper=modelDefinition$hyper$local, replicate=replicateIdx,
-                                              group = time_row_residence_census_tract, control.group=list(model="rw2")))
+                                              group = time_row_residence_census_tract, control.group=list(model="rw1")))
           validLatentFieldColumns <- c(validLatentFieldColumns,'residence_census_tractRow','time_row_residence_census_tract')
         } else {
           formula <- update(formula,  ~ . + f(residence_census_tractRow, model='iid', diagonal=1e-3, graph=modelDefinition$neighborGraph, hyper=modelDefinition$hyper$local, replicate=replicateIdx))
