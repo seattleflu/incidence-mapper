@@ -39,10 +39,10 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   
   # construct priors
   hyper=list()
-  hyper$global <- list(prec = list( prior = "pc.prec", param = 1/1, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
+  hyper$global <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
-  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e-2, alpha = 0.01))
   
@@ -77,13 +77,13 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # initialize formula for each level
   if(numLevels>1){
     outcomeStr <- paste('cbind(',paste(paste('outcome',1:numLevels,sep='.'),sep='',collapse=', '),')',sep='',collapse = '')
-    formula <- as.formula(paste(outcomeStr,'~','pathogen - 1 + catchment',sep=' '))
+    formula <- as.formula(paste(outcomeStr,'~','pathogen - 1 ',sep=' '))
   } else { # why does R do inconsistent stuff with column names!?!!
-    formula <- as.formula('outcome ~ 1 + catchment')
+    formula <- as.formula('outcome ~ 1 ')
   }
   
   # factors as fixed effects, assuming no interaction terms
-  validFactorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('pathogen','n','positive')) | 
+  validFactorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('pathogen','n','positive','catchment')) | 
                                                                 grepl('row',names(db$observedData)) |
                                                                 grepl('age',names(db$observedData)) | 
                                                                 grepl('residence_',names(db$observedData)) | 
@@ -122,14 +122,14 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         
         inputData$age_row_iid <- inputData$age_row
   
-        formula <- update(formula,  ~ . + f(age_row_iid, model='iid', diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+        formula <- update(formula,  ~ . + f(age_row_iid, model='iid', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
         # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_iid') # age doesn't go into space-time latent field
         
       } else if (any(grepl('age_range_fine',names(inputData)))) {
         
         inputData$age_row_rw2 <- inputData$age_row
         
-        formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+        formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
         # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2') # age doesn't go into space-time latent field
         
       }
@@ -159,8 +159,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
 
         } else if (any(grepl('age_range_fine',names(inputData)))) {
           
-          formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
-                                              group = site_age_ageIdx, control.group=list(model="rw1")))
+          # formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
+                                              # group = site_age_ageIdx, control.group=list(model="rw1")))
           # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
           
         }
@@ -354,7 +354,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
                           latentFieldData = lc.data,  
                           observedData = db$observedData,
                           queryList = db$queryList,
-                          spatial_domain = spatial_domain)
+                          spatial_domain = spatial_domain,
+                          offset = inputData$catchment)
 
   return(modelDefinition)
 }
