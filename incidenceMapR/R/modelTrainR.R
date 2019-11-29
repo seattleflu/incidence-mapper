@@ -15,8 +15,7 @@ modelTrainR <- function(modelDefinition){
   # run model
   model <- INLA::inla(formula = modelDefinition$formula,
                 family = modelDefinition$family, 
-                data = modelDefinition$inputData, 
-                offset = modelDefinition$offset,
+                data = modelDefinition$inputData,
                 lincomb = modelDefinition$lincomb,
                 Ntrials = modelDefinition$inputData$n,
                 control.predictor=list(compute=TRUE,link=1),

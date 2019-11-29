@@ -40,11 +40,11 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # construct priors
   hyper=list()
   hyper$global <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
-  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
+  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
-  hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e-2, alpha = 0.01))
+  hyper$site_age <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   
 
   # unlike smoothing model, we only replicate latent fields across pathogens, but treat all other factors as fixed effects
@@ -77,9 +77,9 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # initialize formula for each level
   if(numLevels>1){
     outcomeStr <- paste('cbind(',paste(paste('outcome',1:numLevels,sep='.'),sep='',collapse=', '),')',sep='',collapse = '')
-    formula <- as.formula(paste(outcomeStr,'~','pathogen - 1 ',sep=' '))
+    formula <- as.formula(paste(outcomeStr,'~','pathogen - 1 + offset(catchment)',sep=' '))
   } else { # why does R do inconsistent stuff with column names!?!!
-    formula <- as.formula('outcome ~ 1 ')
+    formula <- as.formula('outcome ~ 1 + offset(catchment) ')
   }
   
   # factors as fixed effects, assuming no interaction terms
@@ -116,7 +116,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2')
     }
     
-    if(COLUMN == 'age_row'){
+    if(COLUMN == 'age_row' & !any(grepl('site',names(inputData)))){ # concurvity issue with iid age and iid site_age. Can't fit both as iid. 
+
 
       if (any(grepl('age_range_coarse',names(inputData)))) {
         
@@ -153,14 +154,14 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         
         if (any(grepl('age_range_coarse',names(inputData)))) {
           
-          # concurvity issue with iid age and iid site_age. Can't fit both
-          # formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
-                                              # group = site_age_ageIdx, control.group=list(model="iid")))
+          # concurvity issue with iid age and iid site_age. Can't fit both as iid. 
+          formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
+                                              group = site_age_ageIdx, control.group=list(model="iid")))
 
         } else if (any(grepl('age_range_fine',names(inputData)))) {
           
-          # formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
-                                              # group = site_age_ageIdx, control.group=list(model="rw1")))
+          formula <- update(formula,  ~ . + f(site_age_siteIdx, model='iid', diagonal=1e-3, hyper=modelDefinition$site_age, constr = TRUE, replicate=replicateIdx,
+                                              group = site_age_ageIdx, control.group=list(model="rw1")))
           # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
           
         }
@@ -354,8 +355,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
                           latentFieldData = lc.data,  
                           observedData = db$observedData,
                           queryList = db$queryList,
-                          spatial_domain = spatial_domain,
-                          offset = inputData$catchment)
+                          spatial_domain = spatial_domain)
 
   return(modelDefinition)
 }
