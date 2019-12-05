@@ -142,20 +142,18 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       siteValues <- unique(db$observedData[[COLUMN]])
       for (SITE in siteValues){
         siteIdx <- (db$observedData[[COLUMN]]==SITE) 
-        if (grepl('retrospective',SITE,ignore.case = TRUE)){
-          db$observedData$positive[siteIdx & is.na(db$observedData$positive)]<-0
+        # when time is a variable, only set positive to 0 when n==0 if we're sure the site was operational and providing data
+        # ideally, this would pull from a data source with gold-standard dates
+        if('encountered_week' %in% names(db$observedData)){
+          minWeek=as.character(min(db$observedData$encountered_week[siteIdx & !is.na(db$observedData$positive)]))
+          maxWeek=as.character(max(db$observedData$encountered_week[siteIdx & !is.na(db$observedData$positive)]))
+          db$observedData$positive[siteIdx & is.na(db$observedData$positive) &
+                                   (db$observedData$encountered_week>=minWeek) &
+                                   (db$observedData$encountered_week <= maxWeek)]<-0
         } else {
-          if('encountered_week' %in% names(db$observedData)){
-            minWeek=as.character(min(db$observedData$encountered_week[siteIdx & !is.na(db$observedData$positive)]))
-            maxWeek=as.character(max(db$observedData$encountered_week[siteIdx & !is.na(db$observedData$positive)]))
-            db$observedData$positive[siteIdx & is.na(db$observedData$positive) &
-                                     (db$observedData$encountered_week>=minWeek) &
-                                     (db$observedData$encountered_week <= maxWeek)]<-0
-          } else {
-            idx <- is.na(db$observedData$positive)
-            if(all(db$observedData$positive[siteIdx & !idx]==db$observedData$n[siteIdx & !idx])){
-              db$observedData$positive[siteIdx & idx]<-0
-            }
+          idx <- is.na(db$observedData$positive)
+          if(all(db$observedData$positive[siteIdx & !idx]==db$observedData$n[siteIdx & !idx])){
+            db$observedData$positive[siteIdx & idx]<-0
           }
         }
       }
