@@ -60,7 +60,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
     return('error!  must provide "pathogen" column.')
   }
   
-    # set family across all levels
+  # set family across all levels
   family <- rep(family,numLevels)
   
   # build outcome matrix and replicate list for multiple likelihoods
@@ -317,8 +317,11 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # generate list of desired linear combinations # https://groups.google.com/forum/#!topic/r-inla-discussion-group/_e2C2L7Wc30
     lc.latentField <- vector("list", nrow(lc.data))
     
-    w<-vector("list", length(names(lcIdx))+1)
-    w[[length(names(lcIdx))+1]]<-1 #pathogen
+    relevantCovariateEffects <- c('CDC_ILI')  # also bing etc
+    relevantCovariateIdx <- (relevantCovariateEffects %in% names(inputData))
+
+    w<-vector("list", length(names(lcIdx))+ 1 + sum(relevantCovariateIdx))
+    w[length(names(lcIdx))+1:(1+sum(relevantCovariateIdx))]<-1 #pathogen and fixed effects
     
     for(k in 1:nrow(lc.data)){
 
@@ -326,7 +329,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
         w[[n]]<-rep(0,nrow(lc.data))
         w[[n]][lcIdx[[n]][k]]<-1
       }
-      names(w) <- c(names(lcIdx),pathogenNames[lc.data$replicateIdx[k]])
+      names(w) <- c(names(lcIdx),pathogenNames[lc.data$replicateIdx[k]],relevantCovariateEffects[relevantCovariateIdx])
 
       lc <- inla.make.lincomb(w)
       names(lc)<- paste0('latent_field',k)
