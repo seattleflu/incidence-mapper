@@ -32,9 +32,12 @@ fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 #                   ),
 #                   tmp2)
 
-pathogenKeys <- list(flu=fluPathogens, other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')),
-                     all='all', rsv = c('RSVA','RSVB'),
-                     Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', RSVA='RSVA', RSVB='RSVB', AdV='AdV',CoV='CoV')
+pathogenKeys <- list(
+                     flu=fluPathogens, Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', Flu_C_pan = 'Flu_C_pan' #,
+                     # all='all', other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')),
+                     # rsv = c('RSVA','RSVB'), RSVA='RSVA', RSVB='RSVB', 
+                     # AdV='AdV',CoV='CoV',RV='RV'
+                     )
 
 
 factors   <- c('site_type','sex','flu_shot','age_range_coarse_upper')
@@ -87,13 +90,41 @@ for (SOURCE in names(geoLevels)){
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
 
-      db <- expandDB(selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
+      db <- expandDB(db<-selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
       
       
       
       db$observedData <- db$observedData %>% filter(site_type=='retrospective')
       
+      db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek('08-10-2019'), sep='')] <- NaN
       
+      
+      
+      # hack in all flu timeseries
+      db2 <- read.csv('all_flu_by_time_query_result_2019-12-05T19_29_45.675Z.csv')
+      lineages <- unique(db2$lineage)
+      levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
+      names(db2)[1]<-'pathogen'
+      names(db2)[2]<-'encountered_week'
+      
+      
+      countData<-list()
+      countData$queryList<-list(GROUP_BY=list(COLUMN='encountered_week'))
+      countData$observedData <- db2 %>% filter(pathogen %in% pathogenKeys[[PATHOGEN]]) %>% 
+        group_by(encountered_week) %>% summarize(positive = sum(case_count), n = sum(case_count))
+      countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
+
+      ## make sure always extrapolates to currentWeek (this version is okay)
+      countData$observedData$encountered_week <- factor(countData$observedData$encountered_week, levels=sort(unique(countData$observedData$encountered_week)), ordered = TRUE)
+      countData$observedData$positive[countData$observedData$encountered_week > paste('2019-W',isoweek('18-11-2019'), sep='')] <- NaN
+      
+      countModelDef<-smoothModel(countData)
+      countModel <- modelTrainR(countModelDef)
+    
+      countModel$modeledData$log_all_flu_count_field_effect <- log(countModel$modeledData$modeled_count_mean)
+
+      db$observedData <- db$observedData %>% left_join( countModel$modeledData %>% select(encountered_week,log_all_flu_count_field_effect))
+      db$encountered_week <- factor(db$encountered_week, levels=sort(unique(db$encountered_week)), ordered = TRUE)
       
       
       #if you want to add the ILI data to the db
