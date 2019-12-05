@@ -116,27 +116,28 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2')
     }
     
-    if(COLUMN == 'age_row' & !any(grepl('site',names(inputData)))){ # concurvity issue with iid age and iid site_age. Can't fit both as iid. 
+    if(COLUMN == 'age_row' ){ 
 
-
-      if (any(grepl('age_range_coarse',names(inputData)))) {
-        
-        inputData$age_row_iid <- inputData$age_row
-  
-        formula <- update(formula,  ~ . + f(age_row_iid, model='iid', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
-        # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_iid') # age doesn't go into space-time latent field
-        
-      } else if (any(grepl('age_range_fine',names(inputData)))) {
-        
-        inputData$age_row_rw2 <- inputData$age_row
-        
-        formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
-        # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2') # age doesn't go into space-time latent field
-        
-      }
-      
       excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'age')
-      
+
+      if (!any(grepl('site',names(inputData)))) {# concurvity issue with iid age and iid site_age. Can't fit both as iid. 
+        
+        if (any(grepl('age_range_coarse',names(inputData)))) {
+          
+          inputData$age_row_iid <- inputData$age_row
+    
+          formula <- update(formula,  ~ . + f(age_row_iid, model='iid', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+          # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_iid') # age doesn't go into space-time latent field
+          
+        } else if (any(grepl('age_range_fine',names(inputData)))) {
+          
+          inputData$age_row_rw2 <- inputData$age_row
+          
+          formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+          # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2') # age doesn't go into space-time latent field
+          
+        }
+      }
     }
     
     if(grepl('site',COLUMN)){
