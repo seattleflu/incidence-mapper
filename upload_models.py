@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-store", default=default_model_store_path)
     parser.add_argument("--fail-on-error",dest='onerror', default=True, action='store_false',
                         help='Allows the procressing of files to continue even in the case of an error')
-    parser.add_argument("--api-url", default="http://40.112.165.255/v1/generic_models",
+    parser.add_argument("--api-url", default="https://incidence-mapper.seattleflu.org//v1/generic_models",
                         help="URL for Seattle FLU API Incidence Mapper Model Server API")
     parser.add_argument("--api-key", help="API-KEY Allowing uploads")
     
