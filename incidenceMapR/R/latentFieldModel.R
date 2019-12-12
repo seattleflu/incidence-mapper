@@ -40,7 +40,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # construct priors
   hyper=list()
   hyper$global <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
@@ -142,12 +142,13 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
     
     if(grepl('site',COLUMN)){
       
+      excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'site','site_age')
+      
       if(length(unique(inputData[[COLUMN]]))>1){
         
         # site intercept
         inputData$site_row_iid <- match(inputData[[COLUMN]],unique(inputData[[COLUMN]]))
         formula <- update(formula,  ~ . + f(site_row_iid, model='iid', hyper=modelDefinition$hyper$site_iid, replicate=replicateIdx))
-        excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'site')
         
         # site-age interaction
         # sites do collect different ages because of who accesses each site.
@@ -168,8 +169,6 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
             # rw1 chosen to reduce "concurvity" with global age: https://peerj.com/articles/6876/#p-161
             
           }
-          
-          excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'site_age')
         }
       }
     }

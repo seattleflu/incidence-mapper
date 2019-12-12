@@ -14,7 +14,7 @@ SRC <- 'production'
 # SRC <- 'simulated_data'
 
 db <- selectFromDB(queryIn= list(SELECT  =c("*")), source = SRC)
-max(db$observedData$encountered_date)
+mostRecentSample<-max(db$observedData$encountered_date)
 
 pathogens <- db$observedData %>% group_by(pathogen) %>% summarize(n = n()) %>% arrange(desc(n))
 
@@ -67,7 +67,7 @@ for (SOURCE in names(geoLevels)){
     # SOURCE='sfs_domain_geojson'
     # GEO='residence_regional_name'
     # PATHOGEN='flu'
-    # PATHOGEN='Flu_A_H1'
+    # PATHOGEN='Flu_C_pan'
     
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
@@ -96,27 +96,56 @@ for (SOURCE in names(geoLevels)){
       
       db$observedData <- db$observedData %>% filter(site_type=='retrospective')
       
-      db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek('08-10-2019'), sep='')] <- NaN
+      db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NaN
       
       
       
       # hack in all flu timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2019-12-05T19_29_45.675Z.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2019-12-11T22_02_07.419Z.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
       names(db2)[2]<-'encountered_week'
+      
+      db2$encountered_week <- factor(db2$encountered_week, levels=sort(unique(db2$encountered_week)), ordered = TRUE)
       
       
       countData<-list()
       countData$queryList<-list(GROUP_BY=list(COLUMN='encountered_week'))
       countData$observedData <- db2 %>% filter(pathogen %in% pathogenKeys[[PATHOGEN]]) %>% 
         group_by(encountered_week) %>% summarize(positive = sum(case_count), n = sum(case_count))
-      countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
+      
+      ## make sure always extrapolates to currentWeek 
+      
+        mostRecentWeek <- max(countData$observedData$encountered_week)
+        
+        minYear <- year<-as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
+        maxYear <- year<-as.numeric(gsub('-W[0-9]{2}','',currentWeek))
+        minWeek <- as.numeric(gsub('[0-9]{4}-W','',mostRecentWeek ))
+        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',currentWeek )) + (maxYear-minYear)*52 
+        
+        if(minWeek <maxWeek & minYear<=maxYear){
+          weeks <- 1+( (seq(minWeek+1,maxWeek,by=1)-1) %% 52)
+          yearBreaks <- c(0,which(diff(weeks)<1), length(weeks))
+          years=c()
+          for (k in 2:length(yearBreaks)){
+            years <- c(years, rep(minYear+(k-2), yearBreaks[k]-yearBreaks[k-1]  ))
+          }
+          
+          forecast_weeks <- paste(years,'-W',sprintf("%02d",weeks),sep='')
+        } else {
+          forecast_weeks <- NULL
+        }
+        
+        if(!is.null(forecast_weeks)){
+          countData$observedData <- countData$observedData %>% tibble::add_row(encountered_week = forecast_weeks, n=0)
+        }
 
-      ## make sure always extrapolates to currentWeek (this version is okay)
-      countData$observedData$encountered_week <- factor(countData$observedData$encountered_week, levels=sort(unique(countData$observedData$encountered_week)), ordered = TRUE)
-      countData$observedData$positive[countData$observedData$encountered_week > paste('2019-W',isoweek('18-11-2019'), sep='')] <- NaN
+      countData$observedData$positive[countData$observedData$encountered_week >= as.character(mostRecentWeek)] <- NaN
+      
+      
+      countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
+      
       
       countModelDef<-smoothModel(countData)
       countModel <- modelTrainR(countModelDef)
@@ -124,7 +153,7 @@ for (SOURCE in names(geoLevels)){
       countModel$modeledData$log_all_flu_count_field_effect <- log(countModel$modeledData$modeled_count_mean)
 
       db$observedData <- db$observedData %>% left_join( countModel$modeledData %>% select(encountered_week,log_all_flu_count_field_effect))
-      db$encountered_week <- factor(db$encountered_week, levels=sort(unique(db$encountered_week)), ordered = TRUE)
+      db$observedData$encountered_week <- factor(db$observedData$encountered_week, levels=sort(unique(db$observedData$encountered_week)), ordered = TRUE)
       
       
       #if you want to add the ILI data to the db
