@@ -24,10 +24,10 @@ appendILIDataFc <- function(db, currentWeek){
   zeroIdx <- ILI_forecast_dat$ILI_all==0
   ILI_forecast_dat$ILI_all[zeroIdx] <- 1/2*ILI_forecast_dat$ILI[which(zeroIdx)-1] + 1/2*ILI_forecast_dat$ILI[which(zeroIdx)+1]
   
-  ILI_forecast_dat <- ILI_forecast_dat %>% dplyr::select(encountered_week, ILI_all) %>% dplyr::rename(ILI = ILI_all)
+  ILI_forecast_dat <- ILI_forecast_dat %>% dplyr::select(encountered_week, ILI_all) %>% dplyr::rename(CDC_ILI_field_effect = ILI_all)
   
   # logit for covariate
-  ILI_forecast_dat$ILI <- boot::logit(ILI_forecast_dat$ILI)
+  ILI_forecast_dat$CDC_ILI_field_effect <- boot::logit(ILI_forecast_dat$CDC_ILI_field_effect)
   
   #add to the db
   db$observedData <- dplyr::left_join(db$observedData, ILI_forecast_dat, by = c("encountered_week"="encountered_week"))

@@ -25,7 +25,7 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     if ("encountered_week" %in% names(db$observedData)){
       
       weeks <- unique(sort(db$observedData$encountered_week))
-      mostRecentWeekWithData <- as.character(weeks[length(weeks)])
+      # mostRecentWeekWithData <- as.character(weeks[length(weeks)])
       
       if(is.null(minWeek)){
         minYear <- as.numeric(gsub('-W[0-9]{2}','',weeks[1]))
@@ -103,13 +103,21 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
   
   # don't expand on nested shape variables
-    nestedVariables <- c('cra_name','neighborhood_district_name','puma','city', 'regional_name')
+    if (any(grepl('census_tract',names(db$observedData)))){
+      nestedVariables <- c('residence_cra_name','residence_neighborhood_district_name','residence_puma','residence_city', 'residence_regional_name',
+                           'work_cra_name','work_name','work_puma','work_city', 'work_regional_name')
+    } else {
+      nestedVariables <- c()
+    }
 
   # expand.grid for non-nested variables
     colIdx <- ( names(validColumnData) %in% names(db$observedData) ) &  !( names(validColumnData) %in% nestedVariables) 
     tmp<-expand.grid(validColumnData[colIdx],stringsAsFactors = FALSE)
     
   # join
+  if('encountered_week' %in% names(db$observedData)){
+    db$observedData$encountered_week <- as.character(db$observedData$encountered_week)  
+  }
   db$observedData <- dplyr::left_join(tmp,db$observedData, by=names(validColumnData)[colIdx])
 
   # order weeks  
@@ -120,17 +128,39 @@ expandDB <- function( db = dbViewR::selectFromDB(),
   # sample size as zero instead of NaN
   if ("n" %in% names(db$observedData)){
     db$observedData$n[is.na(db$observedData$n)]<-0
-      
-      # positives as 0 instead of NaN when positive count is total count always (eg catchments) 
-      idx <- !is.na(db$observedData$positive)
-      if(all(db$observedData$positive[idx]==db$observedData$n[idx])){
-        if('encountered_week' %in% names(db$observedData)){
-          db$observedData$positive[!idx & (db$observedData$encountered_week <= mostRecentWeekWithData)]<-0
+
+    # deal with NAs based on when sites turned on
+    if (any(grepl('site', names(db$observedData), ignore.case = TRUE))){
+      COLUMN <- names(db$observedData)[grepl('site', names(db$observedData), ignore.case = TRUE)]
+      if (length(COLUMN)>1){
+        if( any(COLUMN=='site')){
+          COLUMN <- COLUMN[COLUMN=='site']
         } else {
-          db$observedData$positive[!idx]<-0
+          COLUMN <- COLUMN[COLUMN=='site_type']
         }
       }
+      siteValues <- unique(db$observedData[[COLUMN]])
+      for (SITE in siteValues){
+        siteIdx <- (db$observedData[[COLUMN]]==SITE) 
+        # when time is a variable, only set positive to 0 when n==0 if we're sure the site was operational and providing data
+        # ideally, this would pull from a data source with gold-standard dates
+        if('encountered_week' %in% names(db$observedData)){
+          minWeek=as.character(min(db$observedData$encountered_week[siteIdx & !is.na(db$observedData$positive)]))
+          maxWeek=as.character(max(db$observedData$encountered_week[siteIdx & !is.na(db$observedData$positive)]))
+          db$observedData$positive[siteIdx & is.na(db$observedData$positive) &
+                                   (db$observedData$encountered_week>=minWeek) &
+                                   (db$observedData$encountered_week <= maxWeek)]<-0
+        } else {
+          idx <- is.na(db$observedData$positive)
+          if(all(db$observedData$positive[siteIdx & !idx]==db$observedData$n[siteIdx & !idx])){
+            db$observedData$positive[siteIdx & idx]<-0
+          }
+        }
+      }
+    }
   }
+  
+  
   
   # nested variables
     colIdx <- which(( names(validColumnData) %in% names(db$observedData) ) & ( names(validColumnData) %in% nestedVariables ) )

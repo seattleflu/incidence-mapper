@@ -122,13 +122,12 @@ masterSpatialDB <- function(shape_level = 'census_tract', source = 'king_county_
         shp$work_census_tract <- as.character(shp[[FIELDNAME]])
       }
     } 
-    if (grepl('regional_name',NAME,ignore.case = TRUE)){
-      FIELDNAME <- names(shp)[grepl('regional_name',names(shp),ignore.case = TRUE)]
-      shp$residence_regional_name <- as.character(shp[[FIELDNAME]])
-      shp$work_regional_name <- as.character(shp[[FIELDNAME]])
+    if (NAME=='regional_name'){
+      shp$residence_regional_name <- as.character(shp[[NAME]])
+      shp$work_regional_name <- as.character(shp[[NAME]])
     }
   }
-  
+
   # add spatial domain
   shp$domain <- paste(source,shape_level,sep="_")
   

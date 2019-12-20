@@ -88,15 +88,19 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   minWeek <- as.numeric(gsub('[0-9]{4}-W','',last_ILI_week ))
   maxWeek <- as.numeric(gsub('[0-9]{4}-W','',currentWeek )) + (maxYear-minYear)*52 
   
-  weeks <- 1+( (seq(minWeek+1,maxWeek,by=1)-1) %% 52)
-  yearBreaks <- c(0,which(diff(weeks)<1), length(weeks))
-  years=c()
-  for (k in 2:length(yearBreaks)){
-    years <- c(years, rep(minYear+(k-2), yearBreaks[k]-yearBreaks[k-1]  ))
+  if(minWeek <maxWeek & minYear<=maxYear){
+    weeks <- 1+( (seq(minWeek+1,maxWeek,by=1)-1) %% 52)
+    yearBreaks <- c(0,which(diff(weeks)<1), length(weeks))
+    years=c()
+    for (k in 2:length(yearBreaks)){
+      years <- c(years, rep(minYear+(k-2), yearBreaks[k]-yearBreaks[k-1]  ))
+    }
+    
+    forecast_weeks <- paste(years,'-W',sprintf("%02d",weeks),sep='')
+  } else {
+    forecast_weeks <- NULL
   }
   
-  forecast_weeks <- paste(years,'-W',sprintf("%02d",weeks),sep='')
-
   #set up data frame to store forecasts
   fc_master <- slice(dat, 1:n()) %>% select(encountered_week) 
   end_fc_time <- nrow(fc_master)
@@ -104,42 +108,44 @@ calcfc<- function(dat, num_prior_data=52, currentWeek=currentWeek){
   if(!is.null(forecast_weeks)){
     fc_master <- fc_master %>% tibble::add_row(encountered_week = forecast_weeks)
   }
-  fc_master <- fc_master %>% tibble::add_column(fc = NA, upper = NA, lower=NA)
+  fc_master <- fc_master %>% tibble::add_column(fc = NaN, upper = NaN, lower=NaN)
   
   num_future_data <- nrow(fc_master) - end_fc_time
 
   
   #run forecasting for each week + future forecast
-  for (current_time in (num_prior_data+1):end_fc_time){
-    
-    #start forecasting with prior data
-    dat_s <- slice(dat, (current_time-num_prior_data):current_time)
-    
-    #fit model and forecast 1 wk ahead for all weeks
-    fit <- auto.arima(dat_s$ILI, stepwise=FALSE, parallel=TRUE, num.cores=8) 
-    fc <- forecast(fit, h=1) #forecast 1 wk ahead
-    if (current_time == nrow(dat) && !is.null(forecast_weeks)){
-      fc <- forecast(fit, h=num_future_data) #forecast more weeks ahead for last time point
+  if (num_prior_data < end_fc_time) { # damn R and it's silently reversible indexing!
+    for (current_time in (num_prior_data+1):end_fc_time){
+      
+      #start forecasting with prior data
+      dat_s <- slice(dat, (current_time-num_prior_data):current_time)
+      
+      #fit model and forecast 1 wk ahead for all weeks
+      fit <- forecast::auto.arima(dat_s$ILI, stepwise=FALSE, parallel=TRUE, num.cores=8) 
+      fc <- forecast::forecast(fit, h=1) #forecast 1 wk ahead
+      if (current_time == nrow(dat) && !is.null(forecast_weeks)){
+        fc <- forecast::forecast(fit, h=num_future_data) #forecast more weeks ahead for last time point
+      }
+      
+      
+      #merge fitted value with original data for plotting 
+      fc_master_timerange <- (current_time+1):(current_time+1)
+      if(current_time == nrow(dat) && !is.null(forecast_weeks)){
+        fc_master_timerange <- (current_time+1):(current_time+num_future_data)
+      }
+      
+      #store the forecast values in the master list
+      fc_master$fc[fc_master_timerange] <-data.matrix(fc$mean)
+      fc_master$upper[fc_master_timerange] <- data.matrix(fc$upper[,2])
+      fc_master$lower[fc_master_timerange] <- data.matrix(fc$lower[,2])
+      
+      #inverse logit the forecast and the range 
+      fc_master$fc[fc_master_timerange] <-boot::inv.logit(fc_master$fc[fc_master_timerange])
+      fc_master$upper[fc_master_timerange] <-boot::inv.logit(fc_master$upper[fc_master_timerange])
+      fc_master$lower[fc_master_timerange] <-boot::inv.logit(fc_master$lower[fc_master_timerange])
+      
+      
     }
-    
-    
-    #merge fitted value with original data for plotting 
-    fc_master_timerange <- (current_time+1):(current_time+1)
-    if(current_time == nrow(dat) && !is.null(forecast_weeks)){
-      fc_master_timerange <- (current_time+1):(current_time+num_future_data)
-    }
-    
-    #store the forecast values in the master list
-    fc_master$fc[fc_master_timerange] <-data.matrix(fc$mean)
-    fc_master$upper[fc_master_timerange] <- data.matrix(fc$upper[,2])
-    fc_master$lower[fc_master_timerange] <- data.matrix(fc$lower[,2])
-    
-    #inverse logit the forecast and the range 
-    fc_master$fc[fc_master_timerange] <-boot::inv.logit(fc_master$fc[fc_master_timerange])
-    fc_master$upper[fc_master_timerange] <-boot::inv.logit(fc_master$upper[fc_master_timerange])
-    fc_master$lower[fc_master_timerange] <-boot::inv.logit(fc_master$lower[fc_master_timerange])
-    
-    
   }
   #rename columns
   colnames(fc_master) <- c("encountered_week", "fc_ILI", "upper_95", "lower_95")
@@ -184,6 +190,12 @@ forecast_ILI <- function(num_prior_data=104, currentWeek = NULL){
   # add isoweek as ordered factor
   WA_ILI$encountered_week <- paste(lubridate::isoyear(WA_ILI$week_start) ,'-W',sprintf("%02d",lubridate::isoweek(WA_ILI$week_start)),sep='')
   WA_ILI$encountered_week <- factor(WA_ILI$encountered_week, levels=sort(unique(WA_ILI$encountered_week)), ordered = TRUE)
+  
+  # is CDC ahead of currentWeek?
+  if(currentWeek %in% levels(WA_ILI$encountered_week)){
+    WA_ILI <- WA_ILI[WA_ILI$encountered_week <= currentWeek,] %>% droplevels()
+  }
+  
   
   #convert ILI to fraction btwn 0 and 1
   WA_ILI$ILI <- WA_ILI$ILI/100

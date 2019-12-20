@@ -20,14 +20,17 @@ g_legend <- function(a.gplot){
 fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 
 # setting
-SOURCE='seattle_geojson'
-GEO = 'residence_neighborhood_district_name'
+SOURCE='sfs_domain_geojson'
+GEO = 'residence_regional_name'
 
-# PATHOGEN='Flu_A_H1'
+# SOURCE='seattle_geojson'
+# GEO = 'residence_neighborhood_district_name'
+
+PATHOGEN='Flu_A_H1'
 # PATHOGEN='Flu_A_H3'
 # PATHOGEN <- fluPathogens
 # PATHOGEN='RSVA'
-PATHOGEN='RSVB'
+# PATHOGEN='RSVB'
 # PATHOGEN=c('RSVA','RSVB')
 
 # db <- selectFromDB(queryIn= list(SELECT  =c("*")), source = SRC)
@@ -56,7 +59,7 @@ model <- modelTrainR(modelDefinition)
 ## line plot
 ggplot(model$latentField) + 
   geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-  geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+  # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
   guides(color=FALSE, fill=FALSE) + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
@@ -66,7 +69,7 @@ ggplot(model$latentField) +
 plotDat <- right_join(model$latentField %>% group_by_(.dots =c(GEO,'encountered_week')) %>% summarise(modeled_intensity_median = median(modeled_intensity_median)),shp, by=GEO)
 bbox<-sf::st_bbox(shp$geometry)
 
-mapSettings <- ggplot() + #xlim(c(min(122.5, -bbox[1]),max(121.7,-bbox[3]))) + ylim(c(max(47.17,bbox[2]),min(47.76,bbox[4]))) +
+mapSettings <- ggplot() + xlim(-122.45,-122.05) + ylim(47.3,47.75) +
   theme_bw() +
   theme(axis.text=element_blank(),axis.ticks=element_blank(),panel.grid.major=element_line(colour="transparent"), panel.border = element_blank()) +
   geom_sf(data=shp,size=0.1,aes(fill=NaN))

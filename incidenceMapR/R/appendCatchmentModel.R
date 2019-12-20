@@ -49,23 +49,26 @@ appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=T
   queryIn <- list(
     SELECT   =list(COLUMN=c('pathogen','site_type',geo)),
     WHERE    =list(COLUMN=c('pathogen'), IN = outGroup),
+    WHERE    =list(COLUMN='site_type', IN = unique(db$observedData$site_type)),
     GROUP_BY =list(COLUMN=c('site_type',geo)),
     SUMMARIZE=list(COLUMN='site_type', IN= 'all')
   )
   
   catchmentDb <- selectFromDB(  queryIn, source=source, na.rm=na.rm )
+  catchmentDb <- expandDB( catchmentDb, shp=shp )
   
   # positives as 0 instead of NaN when positive count is total count always (eg catchments) 
   catchmentDb$observedData$positive[is.na(catchmentDb$observedData$positive)]<-0
   
-  catchmentDb <- expandDB( catchmentDb, shp=shp )
-  
-  
-  # at some point, we maybe should check if the catchment map is already saved, 
-  # although this is a cheap computation relative to everything else, so that may never matter
-  
   catchmentModelDefinition <- smoothModel(db=catchmentDb, shp=shp)
   catchmentModel <- modelTrainR(catchmentModelDefinition)
+  
+  # drop sites without enough data to estimate catchment
+  # edge case for new sites (like publicSpace)
+  siteCols <- names(db$observedData)[grepl('site',names(db$observedData))]
+  for (COLUMN in siteCols){
+    db$observedData <- db$observedData %>% filter((!!as.name(COLUMN)) %in% unique(catchmentDb$observedData[[COLUMN]]))
+  }
   
   # append catchment as intercept covariate
   db$observedData <- db$observedData %>% left_join(catchmentModel$modeledData %>% select(site_type, geo, modeled_count_median))

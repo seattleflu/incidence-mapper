@@ -19,13 +19,13 @@
 #' 
 addCensusData <- function( db = dbViewR::selectFromDB(), 
                            geography = "tract", variables, year,
-                           state = "WA", county = "King",
-                           source = "decennial",
+                           state = "WA", county = NULL,
+                           source = "acs5",
                            credentials_path = '/home/rstudio/seattle_flu')
   
 {
   #get the census api key value from the file
-  keyFile <- file(file.path(credentials_path, "census_api_key.txt"), open = 'r') 
+  keyFile <- file(file.path(credentials_path, ".census_api_key.txt"), open = 'r') 
   keyValue <- readLines(keyFile, n = 1)
   close(keyFile)
   
