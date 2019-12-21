@@ -96,7 +96,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   if (any(sfs_year_idx)){# interactions with `sfs_year`
     for(COLUMN in names(db$observedData)[factorIdx & !sfs_year_idx]){
       if (!grepl('field_effect',COLUMN)){
-        formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],paste(COLUMN,':sfs_year',sep=''),sep='+')))
+        formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],paste(COLUMN,'*sfs_year',sep=''),sep='+')))
       } else {
         formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],COLUMN,sep='+')))
       }
