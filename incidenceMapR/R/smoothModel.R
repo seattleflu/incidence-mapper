@@ -40,8 +40,11 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
   
   # construct priors
   hyper=list()
-  hyper$global <- list(prec = list( prior = "pc.prec", param = 1/10, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1/100, alpha = 0.01))
+  hyper$global <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
+  hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
+  
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
   hyper$site_time <- list(prec = list( prior = "pc.prec", param = 1e-2, alpha = 0.01))
@@ -97,7 +100,8 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
       #INLA needs one column per random effect
       inputData$time_row_rw2 <- inputData$time_row
 
-      formula <- update(formula,  ~ . + f(time_row_rw2, model='rw2', hyper=modelDefinition$hyper$global, diagonal=1e-3, replicate=replicateIdx))
+      formula <- update(formula,  ~ . + f(time_row_rw2, model='ar', order=2, hyper=modelDefinition$hyper$time, diagonal=1e-3, replicate=replicateIdx))
+      
     }
     
     if(COLUMN == 'age_row' & !any(grepl('site',names(inputData)))){

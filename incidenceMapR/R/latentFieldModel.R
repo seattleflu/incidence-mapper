@@ -82,7 +82,7 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
     formula <- as.formula('outcome ~ 1 + offset(catchment) ')
   }
   
-  # factors as fixed effects, assuming no interaction terms
+  # factors as fixed effects
   validFactorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('pathogen','n','positive','catchment')) | 
                                                                 grepl('row',names(db$observedData)) |
                                                                 grepl('age',names(db$observedData)) | 
@@ -90,10 +90,21 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
                                                                 grepl('work_',names(db$observedData)) |
                                                                 grepl('encounter',names(db$observedData)) |
                                                                 grepl('site',names(db$observedData)) )]
-  
+
   factorIdx <- names(db$observedData) %in% validFactorNames
-  for(COLUMN in names(db$observedData)[factorIdx]){
-    formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],COLUMN,sep='+')))
+  sfs_year_idx <- names(db$observedData) %in% 'sfs_year' 
+  if (any(sfs_year_idx)){# interactions with `sfs_year`
+    for(COLUMN in names(db$observedData)[factorIdx & !sfs_year_idx]){
+      if (!grepl('field_effect',COLUMN)){
+        formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],paste(COLUMN,':sfs_year',sep=''),sep='+')))
+      } else {
+        formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],COLUMN,sep='+')))
+      }
+    }
+  } else {
+    for(COLUMN in names(db$observedData)[factorIdx]){
+      formula <- as.formula(paste(as.character(formula)[2],'~',paste(as.character(formula)[3],COLUMN,sep='+')))
+    }
   }
   
   
@@ -112,13 +123,13 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       #INLA needs one column per random effect
       inputData$time_row_rw2 <- inputData$time_row
 
-      formula <- update(formula,  ~ . + f(time_row_rw2, model='rw2', diagonal=1e-3, hyper=modelDefinition$hyper$time, replicate=replicateIdx) )
+      formula <- update(formula,  ~ . + f(time_row_rw2, model='ar', order=2, diagonal=1e-3, hyper=modelDefinition$hyper$time, replicate=replicateIdx) )
       validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2')
     }
     
     if(COLUMN == 'age_row' ){ 
 
-      excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'age')
+      excludeLatentFieldColumns <- c(excludeLatentFieldColumns,'age','sfs_year')
 
       if (!any(grepl('site',names(inputData))) | length(unique(inputData[grepl('site',names(inputData))]))==1) {# concurvity issue with iid age and iid site_age. Can't fit both as iid. 
         
@@ -126,14 +137,26 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
           
           inputData$age_row_iid <- inputData$age_row
     
-          formula <- update(formula,  ~ . + f(age_row_iid, model='iid', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+          if(any('sfs_year' %in% names(inputData))){
+            inputData$sfs_yearIdx <- as.numeric(as.factor(inputData$sfs_year))
+            formula <- update(formula,  ~ . + f(age_row_iid, model='iid', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx,
+                              group = sfs_yearIdx, control.group=list(model="iid")))
+          } else {
+            formula <- update(formula,  ~ . + f(age_row_iid, model='iid', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+          }
           # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_iid') # age doesn't go into space-time latent field
           
         } else if (any(grepl('age_range_fine',names(inputData)))) {
           
           inputData$age_row_rw2 <- inputData$age_row
           
-          formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+          if(any('sfs_year' %in% names(inputData))){
+            inputData$sfs_yearIdx <- as.numeric(inputData$sfs_year)
+            formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx,
+                              group = sfs_yearIdx, control.group=list(model="iid")))
+          } else {
+            formula <- update(formula,  ~ . + f(age_row_rw2, model='rw2', constr = TRUE, diagonal=1e-3, hyper=modelDefinition$hyper$age, replicate=replicateIdx) )
+          }
           # validLatentFieldColumns <- c(validLatentFieldColumns,'age_row_rw2') # age doesn't go into space-time latent field
           
         }

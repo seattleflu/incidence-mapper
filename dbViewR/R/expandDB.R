@@ -59,7 +59,9 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       validColumnData$age_bin_coarse_lower = c(0,0.5,5,18,65)
       validColumnData$age_bin_coarse_upper = c(0.5,5,18,65,90)
       
-    
+    # year
+      validColumnData$sfs_year = sort(unique(db$observedData$sfs_year))
+      
     # age bin
     # if(any(grepl('age',names(db$observedData)))) {
     #   validColumnData$age_bin <- seq(0,90,by=5)
@@ -103,11 +105,12 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
   
   # don't expand on nested shape variables
+    nestedVariables <- 'sfs_year'
     if (any(grepl('census_tract',names(db$observedData)))){
-      nestedVariables <- c('residence_cra_name','residence_neighborhood_district_name','residence_puma','residence_city', 'residence_regional_name',
+      nestedVariables <- c(nestedVariables,'residence_cra_name','residence_neighborhood_district_name','residence_puma','residence_city', 'residence_regional_name',
                            'work_cra_name','work_name','work_puma','work_city', 'work_regional_name')
     } else {
-      nestedVariables <- c()
+      nestedVariables <- c(nestedVariables)
     }
 
   # expand.grid for non-nested variables
@@ -166,8 +169,24 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     colIdx <- which(( names(validColumnData) %in% names(db$observedData) ) & ( names(validColumnData) %in% nestedVariables ) )
     for( k in colIdx){
       colName <- names(validColumnData)[k]
-      db$observedData[[colName]] <- shp[[colName]][match(db$observedData[[nestedVariables[nestedVariables == colName]]],as.character(shp[[nestedVariables[nestedVariables == colName]]]))]
+      if (colName !='sfs_year'){
+        db$observedData[[colName]] <- shp[[colName]][match(db$observedData[[nestedVariables[nestedVariables == colName]]],as.character(shp[[nestedVariables[nestedVariables == colName]]]))]
+      } else {
+        # add SFS year
+        db$observedData$sfs_year <- 1
+        for(k in 1:(isoyear(Sys.Date())-2018)){ #ambition!
+          if ('encountered_date' %in% names(db$observedData)){
+            idx<-db$observedData$encountered_date>=paste(as.character(2018+k),'-10-01',sep='')
+          } else if ('encountered_week' %in% names(db$observedData)){
+            idx<-db$observedData$encountered_week>=paste(as.character(2018+k),'-W40',sep='')
+          }
+          db$observedData$sfs_year[idx]<-db$observedData$sfs_year[idx]+1
+        }
+          
+      }
+      db$observedData$sfs_year <- paste('year',db$observedData$sfs_year,sep='_')
     }
+  
   
   # row indices for INLA
   if(any(grepl('encountered_week',names(db$observedData)))){

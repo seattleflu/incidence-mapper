@@ -16,6 +16,9 @@ SRC <- 'production'
 db <- selectFromDB(queryIn= list(SELECT  =c("*")), source = SRC)
 mostRecentSample<-max(db$observedData$encountered_date)
 
+
+fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
+
 pathogens <- db$observedData %>% group_by(pathogen) %>% summarize(n = n()) %>% arrange(desc(n))
 
 tmp<-pathogens$pathogen[pathogens$n >= 500 | grepl('Flu',pathogens$pathogen)]
@@ -23,7 +26,6 @@ tmp2<-as.list(tmp)
 names(tmp2)<-tmp
 
 
-fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
 
 # pathogenKeys <- c(list(all='all',
 #                   flu=fluPathogens,
@@ -40,7 +42,7 @@ pathogenKeys <- list(
                      )
 
 
-factors   <- c('site_type','sex','flu_shot','age_range_coarse_upper')
+factors   <- c('site_type','sex','flu_shot','age_range_coarse_upper','sfs_year')
 
 
 geoLevels <- list(
@@ -52,8 +54,13 @@ geoLevels <- list(
 siteTypes <- c('childrensHospital','clinic','collegeCampus','childrensClinic','port','retrospective','workplace','publicSpace','self-test')
 
 
-# currentWeek <- '2019-W25'
-currentWeek <- paste(isoyear(Sys.time()) ,'-W',isoweek(Sys.time()),sep='')
+# nowcastWeek <- '2019-W25'
+nowcastWeek <- 1+(isoweek(Sys.time()) %% 52)
+nowcastYear <- isoyear(Sys.time())
+if (nowcastWeek < isoweek(Sys.time())){
+  nowcastYear <- nowcastYear+1
+}
+nowcastWeek <- paste(nowcastYear ,'-W',sprintf("%02d",nowcastWeek),sep='')
 
 
 #####################################
@@ -90,7 +97,7 @@ for (SOURCE in names(geoLevels)){
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
 
-      db <- expandDB(db<-selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek=currentWeek)
+      db <- expandDB(db<-selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek =nowcastWeek)
       
       
       
@@ -100,8 +107,8 @@ for (SOURCE in names(geoLevels)){
       
       
       
-      # hack in all flu timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2019-12-11T22_02_07.419Z.csv')
+      # hack in all flu lab timeseries
+      db2 <- read.csv('all_flu_by_time_query_result_2019-12-21T02_03_42.300Z.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -115,14 +122,14 @@ for (SOURCE in names(geoLevels)){
       countData$observedData <- db2 %>% filter(pathogen %in% pathogenKeys[[PATHOGEN]]) %>% 
         group_by(encountered_week) %>% summarize(positive = sum(case_count), n = sum(case_count))
       
-      ## make sure always extrapolates to currentWeek 
+      ## make sure always extrapolates to nowcastWeek 
       
         mostRecentWeek <- max(countData$observedData$encountered_week)
         
-        minYear <- year<-as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
-        maxYear <- year<-as.numeric(gsub('-W[0-9]{2}','',currentWeek))
+        minYear <- as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
+        maxYear <- as.numeric(gsub('-W[0-9]{2}','',nowcastWeek))
         minWeek <- as.numeric(gsub('[0-9]{4}-W','',mostRecentWeek ))
-        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',currentWeek )) + (maxYear-minYear)*52 
+        maxWeek <- as.numeric(gsub('[0-9]{4}-W','',nowcastWeek )) + (maxYear-minYear)*52 
         
         if(minWeek <maxWeek & minYear<=maxYear){
           weeks <- 1+( (seq(minWeek+1,maxWeek,by=1)-1) %% 52)
@@ -141,9 +148,9 @@ for (SOURCE in names(geoLevels)){
           countData$observedData <- countData$observedData %>% tibble::add_row(encountered_week = forecast_weeks, n=0)
         }
 
+      # filter out most recent week, which is likely very data incomplete
       countData$observedData$positive[countData$observedData$encountered_week >= as.character(mostRecentWeek)] <- NaN
-      
-      
+
       countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
       
       
@@ -151,14 +158,18 @@ for (SOURCE in names(geoLevels)){
       countModel <- modelTrainR(countModelDef)
     
       countModel$modeledData$log_all_flu_count_field_effect <- log(countModel$modeledData$modeled_count_mean)
-
+      
+      summary(countModel$inla)
+      plot(countModel$modeledData$modeled_count_mean)
+      lines(countData$observedData$positive)
+      
       db$observedData <- db$observedData %>% left_join( countModel$modeledData %>% select(encountered_week,log_all_flu_count_field_effect))
       db$observedData$encountered_week <- factor(db$observedData$encountered_week, levels=sort(unique(db$observedData$encountered_week)), ordered = TRUE)
       
       
       #if you want to add the ILI data to the db
       # latentFieldModel can't handle this correctly right now
-      # db <- appendILIDataFc(db, currentWeek)
+      # db <- appendILIDataFc(db, nowcastWeek)
       
       # training occassionaly segfaults on but it does not appear to be deterministic...
       tries <- 0
@@ -187,17 +198,28 @@ for (SOURCE in names(geoLevels)){
               )
             dev.off()
             
+            # ggplot(oldModel) + 
+            #   geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
+            #   # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
+            #   guides(color=FALSE, fill=FALSE) + 
+            #   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+            
             dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
             fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'age',sep='-'),'.png',sep='')
             png(filename = fname,width = 6, height = 5, units = "in", res = 300)
-            plotDat <- model$inla$summary.random$site_age_siteIdx
+            if ('site_age_siteIdx' %in% names(model$inla$summary.random)){
+              plotDat <- model$inla$summary.random$site_age_siteIdx
+            } else {
+              plotDat <- model$inla$summary.random$age_row_iid
+            }
             plotDat$group <- unique(model$modeledData$site_type)
+            plotDat$color <- unique(model$modeledData$sfs_year)
             plotDat$age <- rep(unique(model$modeledData$age_range_coarse_upper), each = length(unique(model$modeledData$site_type)))
             N<-length(unique(model$modeledData$age_range_coarse_upper))
             plotDat$ageID <- rep(1:N, each = length(unique(model$modeledData$site_type)))
             print(
-              ggplot(plotDat) + geom_point(aes(x=ageID, y=mean), stat='identity') + theme_bw() +
-                geom_linerange(aes(x=ageID, ymin=`0.025quant`, ymax=`0.975quant`)) +
+              ggplot(plotDat) + geom_point(aes(x=ageID, y=mean, color=color), stat='identity') + theme_bw() +
+                geom_linerange(aes(x=ageID, ymin=`0.025quant`, ymax=`0.975quant`, color=color)) +
                 xlab('age_range_coarse_upper') + ylab('age random effect') + facet_wrap("group")+
                 scale_x_continuous(breaks=1:N,labels=as.character(unique(plotDat$age)))
             )

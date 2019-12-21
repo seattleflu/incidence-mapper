@@ -163,6 +163,13 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   db$age_range_fine_upper[is.na(db$age_range_fine_upper) & (db$age >= 90)]<-90
   db$age_range_coarse_upper[is.na(db$age_range_coarse_upper) & (db$age >= 65)]<-90
   
+  # add SFS year
+  db$sfs_year <- 1
+  for(k in 1:(isoyear(Sys.Date())-2018)){ #ambition!
+    idx<-db$encountered_date>=paste(as.character(2018+k),'-10-01',sep='')
+    db$sfs_year[idx]<-db$sfs_year[idx]+1
+  }
+  db$sfs_year <- paste('year',db$sfs_year,sep='_')
   
   # run query
   # this logic will probably move to sql queries in the database instead of dplyr after....
