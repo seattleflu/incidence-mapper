@@ -35,8 +35,8 @@ names(tmp2)<-tmp
 #                   tmp2)
 
 pathogenKeys <- list(
-                     flu=fluPathogens, Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', Flu_C_pan = 'Flu_C_pan' #,
-                     # all='all', other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')),
+                     flu=fluPathogens, Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', Flu_C_pan = 'Flu_C_pan'#,
+                     # all='all', other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles'))#,
                      # rsv = c('RSVA','RSVB'), RSVA='RSVA', RSVB='RSVB', 
                      # AdV='AdV',CoV='CoV',RV='RV'
                      )
@@ -55,6 +55,7 @@ siteTypes <- c('childrensHospital','clinic','collegeCampus','childrensClinic','p
 
 
 # nowcastWeek <- '2019-W25'
+# 1 week ahead of current week
 nowcastWeek <- 1+(isoweek(Sys.time()) %% 52)
 nowcastYear <- isoyear(Sys.time())
 if (nowcastWeek < isoweek(Sys.time())){
@@ -103,6 +104,7 @@ for (SOURCE in names(geoLevels)){
       
       db$observedData <- db$observedData %>% filter(site_type=='retrospective')
       
+      # forecast past incomplete data
       db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NaN
       
       
@@ -186,6 +188,22 @@ for (SOURCE in names(geoLevels)){
             
             print(summary(model$inla))
             
+            
+            ## rescale latent field model for consistent color code
+            # reference_scale <- 0.201
+            reference_scale <- 0.201*.12/.1
+            
+            
+            current_scale <- model$latentField %>% select(encountered_week,residence_regional_name,modeled_intensity_mode) %>%
+              group_by(encountered_week) %>% summarize(region_intensity_mode = mean(modeled_intensity_mode))
+            current_scale <- max(current_scale$region_intensity_mode)
+            
+            scale_factor <- reference_scale/current_scale
+            
+            for (COLUMN in names(model$latentField)[grepl('modeled_',names(model$latentField))]){
+              model$latentField[[COLUMN]] <- model$latentField[[COLUMN]] * scale_factor
+            }
+            
             dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
             fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'encountered_week',sep='-'),'.png',sep='')
             png(filename = fname,width = 6, height = 5, units = "in", res = 300)
@@ -197,12 +215,6 @@ for (SOURCE in names(geoLevels)){
                     theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
               )
             dev.off()
-            
-            # ggplot(oldModel) + 
-            #   geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
-            #   # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
-            #   guides(color=FALSE, fill=FALSE) + 
-            #   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
             
             dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
             fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'age',sep='-'),'.png',sep='')
