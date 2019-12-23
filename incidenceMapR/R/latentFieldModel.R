@@ -353,7 +353,9 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
     for(k in 1:nrow(lc.data)){
       
       # relevant fixed effects
-      w[length(names(lcIdx))+1+(1:sum(relevantCovariateIdx))] <- relevantCovariate.data[k,]
+      if (any(relevantCovariateIdx)){
+        w[length(names(lcIdx))+1+(1:sum(relevantCovariateIdx))] <- relevantCovariate.data[k,]
+      }
         
       # random effects 
       for(n in 1:length(names(lcIdx))){
