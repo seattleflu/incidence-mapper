@@ -33,8 +33,8 @@ p<-ggplot(plotDat) +
   xlab('2019')+
   ylab('') +
   geom_text(data=plotLabel,aes(x=encountered_week,y=region_intensity_median, label=label)) +
-  scale_y_continuous(breaks=c(0,0.05,0.1,0.15,0.2), 
-                     labels=c('none','low','moderate','high','peak'))
+  scale_y_continuous(breaks=c(0,0.05,0.1,0.15,0.2))#, 
+                     # labels=c('none','low','moderate','high','peak'))
 p
 
 fname <- paste('/home/rstudio/seattle_flu/exploration_scripts/clean_time_viz/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'encountered_week',sep='-'),'.pdf',sep='')
