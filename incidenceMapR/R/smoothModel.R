@@ -100,7 +100,7 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
       #INLA needs one column per random effect
       inputData$time_row_rw2 <- inputData$time_row
 
-      formula <- update(formula,  ~ . + f(time_row_rw2, model='ar', order=2, hyper=modelDefinition$hyper$time, diagonal=1e-3, replicate=replicateIdx))
+      formula <- update(formula,  ~ . + f(time_row_rw2, model='rw1', hyper=modelDefinition$hyper$time, diagonal=1e-3, replicate=replicateIdx))
       
     }
     

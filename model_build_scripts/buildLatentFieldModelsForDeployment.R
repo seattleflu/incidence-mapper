@@ -2,9 +2,6 @@
 # this script (and similar others?) controls standardized database queries and model training for web deployment
 
 library(dbViewR)
-library(incidenceMapR)
-library(modelServR)
-library(modelVisualizeR)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -14,7 +11,7 @@ SRC <- 'production'
 # SRC <- 'simulated_data'
 
 db <- selectFromDB(queryIn= list(SELECT  =c("*")), source = SRC)
-mostRecentSample<-max(db$observedData$encountered_date)
+print(mostRecentSample<-max(db$observedData$encountered_date))
 
 
 fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
@@ -97,20 +94,23 @@ for (SOURCE in names(geoLevels)){
         GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
-
-      db <- expandDB(db<-selectFromDB(  queryIn, source=SRC, na.rm=TRUE ), shp=shp, currentWeek =nowcastWeek)
-      
-      
+      db <- selectFromDB(  queryIn, source=SRC, na.rm=TRUE )
+      db <- expandDB(db, shp=shp, currentWeek =nowcastWeek)
       
       db$observedData <- db$observedData %>% filter(site_type=='retrospective')
       
       # forecast past incomplete data
-      db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NaN
+      # db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NA
       
+      
+      
+      library(incidenceMapR)
+      library(modelServR)
+      library(modelVisualizeR)
       
       
       # hack in all flu lab timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2019-12-21T02_03_42.300Z.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2019-12-28T02_46_04.492Z.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -127,6 +127,7 @@ for (SOURCE in names(geoLevels)){
       ## make sure always extrapolates to nowcastWeek 
       
         mostRecentWeek <- max(countData$observedData$encountered_week)
+        mostRecentWeek <- '2019-W51'
         
         minYear <- as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',nowcastWeek))
@@ -205,7 +206,7 @@ for (SOURCE in names(geoLevels)){
             }
             
             dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
-            fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'encountered_week',sep='-'),'.png',sep='')
+            fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'encountered_week',Sys.Date(),sep='-'),'.png',sep='')
             png(filename = fname,width = 6, height = 5, units = "in", res = 300)
             print(
               ggplot(model$latentField) + 
