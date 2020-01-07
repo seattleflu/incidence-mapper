@@ -56,8 +56,9 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
                                                                 grepl('age',names(db$observedData)) | 
                                                                 grepl('residence_',names(db$observedData)) | 
                                                                 grepl('work_',names(db$observedData)) |
-                                                                grepl('encounter',names(db$observedData)) |
-                                                                grepl('site',names(db$observedData)) )]
+                                                                grepl('encounter',names(db$observedData)) #|
+                                                                # grepl('site',names(db$observedData)) 
+                                                 )]
   
   factorIdx <- validFactorNames %in% names(db$observedData) 
   
@@ -126,8 +127,8 @@ smoothModel <- function(db, shp, family = NULL, neighborGraph = NULL){
     if(grepl('site',COLUMN)){
       
       # site intercept
-      inputData$site_row_iid <- match(inputData[[COLUMN]],unique(inputData[[COLUMN]]))
-      formula <- update(formula,  ~ . + f(site_row_iid, model='iid', hyper=modelDefinition$hyper$site_iid, replicate=replicateIdx))
+      # inputData$site_row_iid <- match(inputData[[COLUMN]],unique(inputData[[COLUMN]]))
+      # formula <- update(formula,  ~ . + f(site_row_iid, model='iid', hyper=modelDefinition$hyper$site_iid, replicate=replicateIdx))
       
       # site-time interaction
       # if('time_row' %in% names(inputData)){

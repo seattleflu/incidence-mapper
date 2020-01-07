@@ -31,6 +31,7 @@ expandDB <- function( db = dbViewR::selectFromDB(),
         minYear <- as.numeric(gsub('-W[0-9]{2}','',weeks[1]))
         minWeek <- as.numeric(gsub('[0-9]{4}-W','',weeks[1] ))
       } else {
+        minWeek <- as.numeric(gsub('[0-9]{4}-W','',minWeek ))
         minYear <- as.numeric(gsub('-W[0-9]{2}','',minWeek))
       }
 
@@ -96,6 +97,9 @@ expandDB <- function( db = dbViewR::selectFromDB(),
       
     # factors (these don't get interpolated by the models, so we only want the valid levels for the dataset at hand)
       factorNames <- names(db$observedData)[ !( (names(db$observedData) %in% c('age','n','positive')) | 
+                                                grepl('n_',names(db$observedData)) |
+                                                grepl('positive_',names(db$observedData)) | 
+                                                # grepl('age_',names(db$observedData)) |  
                                                 grepl('residence_',names(db$observedData)) | 
                                                 grepl('work_',names(db$observedData)) |
                                                 grepl('encounter',names(db$observedData))  )]
@@ -105,12 +109,12 @@ expandDB <- function( db = dbViewR::selectFromDB(),
 
   
   # don't expand on nested shape variables
-    nestedVariables <- 'sfs_year'
+    nestedVariables <- c('sfs_year')
     if (any(grepl('census_tract',names(db$observedData)))){
       nestedVariables <- c(nestedVariables,'residence_cra_name','residence_neighborhood_district_name','residence_puma','residence_city', 'residence_regional_name',
                            'work_cra_name','work_name','work_puma','work_city', 'work_regional_name')
-    } else {
-      nestedVariables <- c(nestedVariables)
+    } else if (any(names(db$observedData) == 'site')){
+      nestedVariables <- c(nestedVariables,'site_type')
     }
 
   # expand.grid for non-nested variables
@@ -169,22 +173,32 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     colIdx <- which(( names(validColumnData) %in% names(db$observedData) ) & ( names(validColumnData) %in% nestedVariables ) )
     for( k in colIdx){
       colName <- names(validColumnData)[k]
-      if (colName !='sfs_year'){
+      if (!(colName %in% c('sfs_year','site_type'))){
         db$observedData[[colName]] <- shp[[colName]][match(db$observedData[[nestedVariables[nestedVariables == colName]]],as.character(shp[[nestedVariables[nestedVariables == colName]]]))]
-      } else {
+      } else if (colName == 'sfs_year'){
         # add SFS year
         db$observedData$sfs_year <- 1
         for(k in 1:(isoyear(Sys.Date())-2018)){ #ambition!
           if ('encountered_date' %in% names(db$observedData)){
             idx<-db$observedData$encountered_date>=paste(as.character(2018+k),'-10-01',sep='')
           } else if ('encountered_week' %in% names(db$observedData)){
-            idx<-db$observedData$encountered_week>=paste(as.character(2018+k),'-W40',sep='')
+            weekStr <- paste(as.character(2018+k),'-W40',sep='')
+            if (weekStr %in% levels(db$observedData$encountered_week)){
+              idx<-db$observedData$encountered_week>=weekStr
+            } else {
+              idx <- NULL
+            }
           }
           db$observedData$sfs_year[idx]<-db$observedData$sfs_year[idx]+1
-        }
-          
+        }  
+        
+        db$observedData$sfs_year <- paste('year',db$observedData$sfs_year,sep='_')
+        
+      } else if (colName == 'site_type'){
+        tmp <- db$observedData %>% group_by(site) %>% summarize(site_type = unique(site_type))
+        
+        db$observedData$site_type <- tmp$site_type[match(db$observedData$site, tmp$site)]
       }
-      db$observedData$sfs_year <- paste('year',db$observedData$sfs_year,sep='_')
     }
   
   

@@ -111,6 +111,23 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
       db <- db %>% select(-present)
     }
     
+    
+    ## clean up site_types
+    # modify names for standardized reporting (this will migrate into ID3C)
+    db$site_type[db$site == "ChildrensHospitalBellevue"] <- 'clinic'
+    db$site_type[db$site == "ChildrensHospitalSeattle"] <- 'clinic'
+    db$site_type[db$site == "ChildrensSeaMar"] <- 'clinic'
+    db$site_type[db$site == "Harborview"] <- 'longitudinalInpatient'
+    db$site_type[db$site == "HarborviewLobby"] <- 'workplace'
+    
+    db$site_type[db$site == "ColumbiaCenter"] <- 'workplace'
+    db$site_type[db$site == "KingStreetStation"] <- 'publicSpace'
+    db$site_type[db$site == "swabNSend"] <- 'self-test'
+    db$site_type[db$site == "UWSuzzalloLibrary"] <- 'collegeCampus'
+
+    # as.data.frame(db %>% group_by(site) %>% summarize(site_type = unique(site_type)))
+
+        
     DBI::dbDisconnect(rawData)
 
 

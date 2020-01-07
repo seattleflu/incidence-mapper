@@ -39,7 +39,8 @@ pathogenKeys <- list(
                      )
 
 
-factors   <- c('site_type','sex','flu_shot','age_range_coarse_upper','sfs_year')
+# factors   <- c('site_type','sex','flu_shot','age_range_coarse_upper','sfs_year')
+factors   <- c('site_type','age_range_coarse_upper','sfs_year')
 
 
 geoLevels <- list(
@@ -97,7 +98,7 @@ for (SOURCE in names(geoLevels)){
       db <- selectFromDB(  queryIn, source=SRC, na.rm=TRUE )
       db <- expandDB(db, shp=shp, currentWeek =nowcastWeek)
       
-      db$observedData <- db$observedData %>% filter(site_type=='retrospective')
+      # db$observedData <- db$observedData %>% filter(site_type=='retrospective')
       
       # forecast past incomplete data
       # db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NA
@@ -110,7 +111,7 @@ for (SOURCE in names(geoLevels)){
       
       
       # hack in all flu lab timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2019-12-28T02_46_04.492Z.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2020-01-06T21_49_44.110Z.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -126,8 +127,8 @@ for (SOURCE in names(geoLevels)){
       
       ## make sure always extrapolates to nowcastWeek 
       
-        mostRecentWeek <- max(countData$observedData$encountered_week)
-        mostRecentWeek <- '2019-W51'
+        # mostRecentWeek <- max(countData$observedData$encountered_week)
+        mostRecentWeek <- '2019-W52'
         
         minYear <- as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',nowcastWeek))
@@ -136,23 +137,27 @@ for (SOURCE in names(geoLevels)){
         
         if(minWeek <maxWeek & minYear<=maxYear){
           weeks <- 1+( (seq(minWeek+1,maxWeek,by=1)-1) %% 52)
-          yearBreaks <- c(0,which(diff(weeks)<1), length(weeks))
-          years=c()
-          for (k in 2:length(yearBreaks)){
-            years <- c(years, rep(minYear+(k-2), yearBreaks[k]-yearBreaks[k-1]  ))
+          if(weeks[1]==1 && length(weeks)<52){
+            years <- rep(maxYear,length(weeks))
+          } else {
+            yearBreaks <- c(0,which(diff(weeks)<1), length(weeks))
+            years=c()
+            for (k in 2:length(yearBreaks)){
+              years <- c(years, rep(minYear+(k-2), yearBreaks[k]-yearBreaks[k-1]  ))
+            }
           }
-          
+
           forecast_weeks <- paste(years,'-W',sprintf("%02d",weeks),sep='')
         } else {
           forecast_weeks <- NULL
         }
         
         if(!is.null(forecast_weeks)){
-          countData$observedData <- countData$observedData %>% tibble::add_row(encountered_week = forecast_weeks, n=0)
+          countData$observedData <- countData$observedData %>% tibble::add_row(encountered_week = forecast_weeks, n=0) %>% distinct(encountered_week,.keep_all = TRUE)
         }
 
       # filter out most recent week, which is likely very data incomplete
-      countData$observedData$positive[countData$observedData$encountered_week >= as.character(mostRecentWeek)] <- NaN
+      countData$observedData$positive[countData$observedData$encountered_week >= as.character(mostRecentWeek)] <- NA
 
       countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
       
@@ -160,10 +165,10 @@ for (SOURCE in names(geoLevels)){
       countModelDef<-smoothModel(countData)
       countModel <- modelTrainR(countModelDef)
     
-      countModel$modeledData$log_all_flu_count_field_effect <- log(countModel$modeledData$modeled_count_mean)
+      countModel$modeledData$log_all_flu_count_field_effect <- log(countModel$modeledData$modeled_count_median)
       
       summary(countModel$inla)
-      plot(countModel$modeledData$modeled_count_mean)
+      plot(countModel$modeledData$modeled_count_median)
       lines(countData$observedData$positive)
       
       db$observedData <- db$observedData %>% left_join( countModel$modeledData %>% select(encountered_week,log_all_flu_count_field_effect))
@@ -217,8 +222,22 @@ for (SOURCE in names(geoLevels)){
               )
             dev.off()
             
+            
+            ggplot(model$modeledData %>% filter(age_range_coarse_upper==65)) + 
+              geom_line(aes_string(x='encountered_week',y="modeled_count_mode", color=GEO,group =GEO)) + 
+              facet_wrap('site_type',scales = 'free_y') +
+              guides(color=FALSE, fill=FALSE) + 
+              theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+        
+            ggplot(model$modeledData %>% filter(age_range_coarse_upper==65)) + 
+              geom_line(aes_string(x='encountered_week',y="positive", color=GEO,group =GEO)) + 
+              facet_wrap('site_type',scales = 'free_y') +
+              guides(color=FALSE, fill=FALSE) + 
+              theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+            
+            
             dir.create('/home/rstudio/seattle_flu/model_diagnostic_plots/', showWarnings = FALSE)
-            fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'age',sep='-'),'.png',sep='')
+            fname <- paste('/home/rstudio/seattle_flu/model_diagnostic_plots/',paste('inla_latent',PATHOGEN,SOURCE,GEO,'age',Sys.Date(),sep='-'),'.png',sep='')
             png(filename = fname,width = 6, height = 5, units = "in", res = 300)
             if ('site_age_siteIdx' %in% names(model$inla$summary.random)){
               plotDat <- model$inla$summary.random$site_age_siteIdx
