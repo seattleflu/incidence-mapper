@@ -18,8 +18,8 @@ g_legend <- function(a.gplot){
 } 
 
 # setting
-SOURCE='seattle_geojson'
-GEO = 'residence_neighborhood_district_name'
+SOURCE='sfs_domain_geojson'
+GEO = 'residence_regional_name'
 
 
 # build model
@@ -35,11 +35,13 @@ db <- expandDB(selectFromDB(  queryIn, source='production', na.rm=TRUE ), shp=sh
 
 ## set up map environment
 plotDat <- right_join(db$observedData,shp, by=GEO)
-plotDat <- plotDat %>% group_by(site_type) %>% mutate(fraction = n/max(n))
+plotDat <- plotDat %>% group_by(site_type) %>% mutate(fraction = n/max(n)) %>%
+  filter(site_type %in% c('childcare','clinic','collegeCampus','homelessShelter',
+                                        'port','retrospective','self-test','workplace'))
 
 bbox<-sf::st_bbox(shp$geometry)
 
-mapSettings <- ggplot() + #xlim(c(min(122.5, -bbox[1]),max(121.7,-bbox[3]))) + ylim(c(max(47.17,bbox[2]),min(47.76,bbox[4]))) +
+mapSettings <- ggplot() + xlim(-122.45,-122.05) + ylim(47.45,47.8) +
   theme_bw() +
   theme(axis.text=element_blank(),axis.ticks=element_blank(),panel.grid.major=element_line(colour="transparent"), panel.border = element_blank()) +
   geom_sf(data=shp,size=0.1,aes(fill=NaN)) 
@@ -48,18 +50,24 @@ mapSettings <- ggplot() + #xlim(c(min(122.5, -bbox[1]),max(121.7,-bbox[3]))) + y
 # colorLimits<-c(min(plotDat$n,na.rm=TRUE),max(plotDat$n,na.rm=TRUE))
 # colorBreaks<-unique(c(min(colorLimits),round(1e0*seq(sqrt(min(colorLimits)),sqrt(max(colorLimits)), length.out = 5)^2)/1e0, max(colorLimits)))
 
+plotDat$site_type[plotDat$site_type=='clinic']<-"childrensOutpatient"
+plotDat$site_type[plotDat$site_type=='port']<-"Sea-Tac"
+plotDat$site_type[plotDat$site_type=='retrospective']<-"hospitalRetrospective"
+
+
 p <- mapSettings + geom_sf(data=plotDat ,size=0, aes(fill=fraction, group='site_type'))  +
-  guides(fill=guide_legend(title="Year 1\n relative recruitment")) +
+  guides(fill=guide_legend(title="  relative\nrecruitment")) +
   viridis::scale_fill_viridis(na.value="transparent") + #,breaks=colorBreaks,limits=colorLimits)+ 
-  facet_wrap('site_type')
+  facet_wrap('site_type', nrow=2)
 p
 
-png(filename=paste('Year1_catchment_map_by_site_type.png',sep='-'),res=600, units='in', width=10,height=6)
+png(filename=paste('Year1_catchment_map_by_site_type.png',sep='-'),res=600, units='in', width=6.67,height=4)
 p
 dev.off()
 
 
-plotDat2 <- plotDat %>% group_by(!!rlang::parse_expr(GEO)) %>% summarize(n=sum(n)) %>% mutate(fraction = n/max(n)) %>% right_join(shp,by=GEO)
+plotDat2 <- plotDat %>% group_by(!!rlang::parse_expr(GEO)) %>% summarize(n=sum(n)) %>% mutate(fraction = n/max(n)) %>% right_join(shp,by=GEO) 
+
 p2 <- mapSettings + geom_sf(data=plotDat2 ,size=0, aes(fill=n))  +
   guides(fill=guide_legend(title="Year 1 count")) +
   viridis::scale_fill_viridis(na.value="transparent",breaks=seq(350,1600,by=200))
