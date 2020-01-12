@@ -38,9 +38,13 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   }
   
   # construct priors
-  hyper=list()
-  hyper$global <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
-  hyper$local <- list(prec = list( prior = "pc.prec", param = 1e1, alpha = 0.01))
+  hyper <- list()
+  
+  hyper.ar1 = 
+  hyper$global <- list(prec = list( prior = "pc.prec", param = c(1e0, 0.01)))
+  hyper$local <- list(prec = list( prior = "pc.prec", param = c(1e-1, 0.01)),
+                      rho = list(prior="pc.cor0", param=c(0.3,0.01)))
+  
   hyper$age <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$time <- list(prec = list( prior = "pc.prec", param = 1e-1, alpha = 0.01))
   hyper$site_iid <- list(prec = list( prior = "pc.prec", param = 1e0, alpha = 0.01))
@@ -77,9 +81,9 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
   # initialize formula for each level
   if(numLevels>1){
     outcomeStr <- paste('cbind(',paste(paste('outcome',1:numLevels,sep='.'),sep='',collapse=', '),')',sep='',collapse = '')
-    formula <- as.formula(paste(outcomeStr,'~','pathogen - 1 + offset(catchment)',sep=' '))
+    formula <- as.formula(paste(outcomeStr,'~','pathogen - 1 + catchment',sep=' '))
   } else { # why does R do inconsistent stuff with column names!?!!
-    formula <- as.formula('outcome ~ 1 + offset(catchment) ')
+    formula <- as.formula('outcome ~ 1 + catchment ')
   }
   
   # factors as fixed effects
@@ -200,12 +204,19 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       
       inputData$residence_regional_nameRow <- match(inputData$residence_regional_name,unique(inputData$residence_regional_name))
       
+      # inputData$time_row_residence_regional_name <- match(inputData$residence_regional_name,unique(inputData$residence_regional_name))
+      
       if('time_row' %in% names(inputData)){
         
         inputData$time_row_residence_regional_name <- inputData$time_row
         
         formula <- update(formula,  ~ . + f(residence_regional_nameRow, model='iid', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
-                                            group = time_row_residence_regional_name, control.group=list(model="ar1")))
+                                            group = time_row_residence_regional_name, control.group=list(model="ar1",hyper=modelDefinition$local)))
+        
+        # inputData$residence_regional_name_timeRow <- inputData$time_row
+        
+        # formula <- update(formula,  ~ . + f(residence_regional_name_timeRow, model='ar1', diagonal=1e-3, hyper=modelDefinition$local, constr = TRUE, replicate=replicateIdx,
+                                            # group = time_row_residence_regional_name, control.group=list(model="iid")))
         validLatentFieldColumns <- c(validLatentFieldColumns,'residence_regional_nameRow','time_row_residence_regional_name')
       } else {
         

@@ -32,9 +32,9 @@ names(tmp2)<-tmp
 #                   tmp2)
 
 pathogenKeys <- list(
-                     flu=fluPathogens, Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', Flu_C_pan = 'Flu_C_pan'#,
-                     # all='all', other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles'))#,
-                     # rsv = c('RSVA','RSVB'), RSVA='RSVA', RSVB='RSVB', 
+                     flu=fluPathogens, Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', Flu_C_pan = 'Flu_C_pan',
+                     all='all', #other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles'))#,
+                     rsv = c('RSVA','RSVB'), RSVA='RSVA', RSVB='RSVB'#,
                      # AdV='AdV',CoV='CoV',RV='RV'
                      )
 
@@ -69,7 +69,7 @@ nowcastWeek <- paste(nowcastYear ,'-W',sprintf("%02d",nowcastWeek),sep='')
 # number of subjects with pathogen and factor at residence location 
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
-    
+
     # SOURCE='sfs_domain_geojson'
     # GEO='residence_regional_name'
     # PATHOGEN='flu'
@@ -83,6 +83,8 @@ for (SOURCE in names(geoLevels)){
     # PATHOGEN='all'
     # PATHOGEN='rsv'
     # PATHOGEN='other_non_flu'
+    # PATHOGEN='RSVA'
+    
     
     shp <- masterSpatialDB(shape_level = gsub('residence_','',GEO), source = SOURCE)
     
@@ -103,7 +105,7 @@ for (SOURCE in names(geoLevels)){
       # forecast past incomplete data
       # db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NA
       
-      
+      # db$observedData <- db$observedData %>% filter(encountered_week<='2019-W24')
       
       library(incidenceMapR)
       library(modelServR)
@@ -111,7 +113,7 @@ for (SOURCE in names(geoLevels)){
       
       
       # hack in all flu lab timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2020-01-06T21_49_44.110Z.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2020-01-12T17_54_25.518Z.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -127,8 +129,8 @@ for (SOURCE in names(geoLevels)){
       
       ## make sure always extrapolates to nowcastWeek 
       
-        # mostRecentWeek <- max(countData$observedData$encountered_week)
-        mostRecentWeek <- '2019-W52'
+        mostRecentWeek <- max(countData$observedData$encountered_week)
+        # mostRecentWeek <- '2019-W52'
         
         minYear <- as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',nowcastWeek))
@@ -155,10 +157,11 @@ for (SOURCE in names(geoLevels)){
         if(!is.null(forecast_weeks)){
           countData$observedData <- countData$observedData %>% tibble::add_row(encountered_week = forecast_weeks, n=0) %>% distinct(encountered_week,.keep_all = TRUE)
         }
-
+  
       # filter out most recent week, which is likely very data incomplete
       countData$observedData$positive[countData$observedData$encountered_week >= as.character(mostRecentWeek)] <- NA
-
+      tail(countData$observedData)
+      
       countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
       
       
@@ -223,15 +226,15 @@ for (SOURCE in names(geoLevels)){
             dev.off()
             
             
-            ggplot(model$modeledData %>% filter(age_range_coarse_upper==65)) + 
+            ggplot(model$modeledData %>% group_by_('encountered_week', GEO) %>% summarize(modeled_count_mode=sum(modeled_count_mode, na.rm=TRUE))) + 
               geom_line(aes_string(x='encountered_week',y="modeled_count_mode", color=GEO,group =GEO)) + 
-              facet_wrap('site_type',scales = 'free_y') +
+              # facet_wrap('site_type',scales = 'free_y') +
               guides(color=FALSE, fill=FALSE) + 
               theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
         
-            ggplot(model$modeledData %>% filter(age_range_coarse_upper==65)) + 
+            ggplot(model$modeledData %>% group_by_('encountered_week', GEO) %>% summarize(positive=sum(positive, na.rm=TRUE))) + 
               geom_line(aes_string(x='encountered_week',y="positive", color=GEO,group =GEO)) + 
-              facet_wrap('site_type',scales = 'free_y') +
+              # facet_wrap('site_type',scales = 'free_y') +
               guides(color=FALSE, fill=FALSE) + 
               theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
             
