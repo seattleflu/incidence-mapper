@@ -12,6 +12,12 @@ SRC <- 'production'
 
 db <- selectFromDB(queryIn= list(SELECT  =c("*")), source = SRC)
 print(mostRecentSample<-max(db$observedData$encountered_date))
+unique(db$observedData$pathogen)
+
+unique(db$observedData$site_type)
+
+as.data.frame(db$observedData %>% group_by(site) %>% summarize(site_type=unique(site_type)),30)
+
 
 
 fluPathogens <- c('Flu_A_H1','Flu_A_H3','Flu_A_pan','Flu_B_pan','Flu_C_pan')
@@ -39,8 +45,8 @@ pathogenKeys <- list(
                      )
 
 
-# factors   <- c('site_type','sex','flu_shot','age_range_coarse_upper','sfs_year')
-factors   <- c('site_type','age_range_coarse_upper','sfs_year')
+# factors   <- c('sex','flu_shot','age_range_coarse_upper','sfs_year')
+factors   <- c('age_range_coarse_upper','sfs_year')
 
 
 geoLevels <- list(
@@ -49,8 +55,7 @@ geoLevels <- list(
                    # wa_geojson = c('residence_puma')
                  )
 
-siteTypes <- c('childrensHospital','clinic','collegeCampus','childrensClinic','port','retrospective','workplace','publicSpace','self-test')
-
+siteTypes <- c("retrospective","collegeCampus","clinic","home","publicSpace","workplace")
 
 # nowcastWeek <- '2019-W25'
 # 1 week ahead of current week
@@ -70,11 +75,11 @@ nowcastWeek <- paste(nowcastYear ,'-W',sprintf("%02d",nowcastWeek),sep='')
 for (SOURCE in names(geoLevels)){
   for (GEO in geoLevels[[SOURCE]]){
 
-    # SOURCE='sfs_domain_geojson'
-    # GEO='residence_regional_name'
-    # PATHOGEN='flu'
+    SOURCE='sfs_domain_geojson'
+    GEO='residence_regional_name'
+    PATHOGEN='flu'
+
     # PATHOGEN='Flu_C_pan'
-    
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
     # GEO='residence_census_tract'
@@ -91,21 +96,31 @@ for (SOURCE in names(geoLevels)){
     for (PATHOGEN in names(pathogenKeys)){
 
       queryIn <- list(
-        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week')),
+        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week','site_type','site')),
         WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
         WHERE    =list(COLUMN='site_type', IN=siteTypes),
-        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week")),
+        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week",'site_type')),
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
       db <- selectFromDB(  queryIn, source=SRC, na.rm=TRUE )
       db <- expandDB(db, shp=shp, currentWeek =nowcastWeek)
-      
-      # db$observedData <- db$observedData %>% filter(site_type=='retrospective')
+    
+      as.data.frame(db$observedData %>% group_by(site,sfs_year) %>% summarize(positive = sum(positive,na.rm=TRUE)))
+      as.data.frame(db$observedData %>% group_by(site_type,sfs_year) %>% summarize(positive = sum(positive,na.rm=TRUE)))
       
       # forecast past incomplete data
       # db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NA
       
-      # db$observedData <- db$observedData %>% filter(encountered_week<='2019-W24')
+      
+      # db$observedData$positive[db$observedData$encountered_week > '2019-W52']<-NA
+      
+      # temporarily removing childrens hospital update
+      db$observedData$positive[db$observedData$site=='RetrospectiveChildrensHospitalSeattle' &
+                                 db$observedData$encountered_week > '2019-W45']<-NA
+      db$observedData$positive[db$observedData$site=='retrospective' &
+                                 db$observedData$encountered_week > '2019-W45']<-NA
+      
+      
       
       library(incidenceMapR)
       library(modelServR)
@@ -113,7 +128,7 @@ for (SOURCE in names(geoLevels)){
       
       
       # hack in all flu lab timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2020-01-12T17_54_25.518Z.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2020-01-19T13_15_24.869283-08_00.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -220,7 +235,7 @@ for (SOURCE in names(geoLevels)){
               ggplot(model$latentField) + 
                     geom_line(aes_string(x='encountered_week',y="modeled_intensity_median", color=GEO,group =GEO)) + 
                     # geom_ribbon(aes_string(x='encountered_week',ymin="modeled_intensity_lower_95_CI", ymax="modeled_intensity_upper_95_CI", fill=GEO,group =GEO),alpha=0.1) +
-                    guides(color=FALSE, fill=FALSE) + 
+                    guides(color=FALSE, fill=FALSE) +
                     theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
               )
             dev.off()
@@ -247,7 +262,7 @@ for (SOURCE in names(geoLevels)){
             } else {
               plotDat <- model$inla$summary.random$age_row_iid
             }
-            plotDat$group <- unique(model$modeledData$site_type)
+            plotDat$group <- unique(model$modeledData$site)
             plotDat$color <- unique(model$modeledData$sfs_year)
             plotDat$age <- rep(unique(model$modeledData$age_range_coarse_upper), each = length(unique(model$modeledData$site_type)))
             N<-length(unique(model$modeledData$age_range_coarse_upper))

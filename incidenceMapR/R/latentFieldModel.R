@@ -127,8 +127,8 @@ latentFieldModel <- function(db , shp, family = NULL, neighborGraph = NULL){
       #INLA needs one column per random effect
       inputData$time_row_rw2 <- inputData$time_row
 
-      formula <- update(formula,  ~ . + f(time_row_rw2, model='rw1', diagonal=1e-3, hyper=modelDefinition$hyper$time, replicate=replicateIdx) )
-      validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2')
+      # formula <- update(formula,  ~ . + f(time_row_rw2, model='rw1', diagonal=1e-3, hyper=modelDefinition$hyper$time, replicate=replicateIdx) )
+      # validLatentFieldColumns <- c(validLatentFieldColumns,'time_row_rw2')
     }
     
     if(COLUMN == 'age_row' ){ 

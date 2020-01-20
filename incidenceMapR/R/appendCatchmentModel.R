@@ -13,7 +13,7 @@
 #'
 #' @export
 #'
-appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=TRUE){
+appendCatchmentModel <- function(db,shp = NULL, source='production', na.rm=TRUE){
   
   validGeoLevels <- c('residence_puma','residence_cra_name','residence_neighborhood_district_name','residence_census_tract','residence_city','residence_regional_name',
                       'work_puma','work_cra_name','work_neighborhood_district_name','work_census_tract','work_city','work_regional_name')
@@ -46,32 +46,39 @@ appendCatchmentModel <- function(db,shp = NULL, source='simulated_data', na.rm=T
       outGroup<-setdiff(pathogens, unlist(strsplit(inputPathogen,'-')))
     }
   
+  siteCols = names(db$observedData)[grepl('site',names(db$observedData))]
   queryIn <- list(
-    SELECT   =list(COLUMN=c('pathogen','site_type',geo)),
+    SELECT   =list(COLUMN=c('pathogen',siteCols,geo)),
     WHERE    =list(COLUMN=c('pathogen'), IN = outGroup),
-    WHERE    =list(COLUMN='site_type', IN = unique(db$observedData$site_type)),
-    GROUP_BY =list(COLUMN=c('site_type',geo)),
-    SUMMARIZE=list(COLUMN='site_type', IN= 'all')
+    WHERE    =list(COLUMN=siteCols, IN = unique(db$observedData[[siteCols]])),
+    GROUP_BY =list(COLUMN=c(siteCols,geo)),
+    SUMMARIZE=list(COLUMN=siteCols, IN= 'all')
   )
   
   catchmentDb <- selectFromDB(  queryIn, source=source, na.rm=na.rm )
   catchmentDb <- expandDB( catchmentDb, shp=shp )
   
+  
   # positives as 0 instead of NaN when positive count is total count always (eg catchments) 
   catchmentDb$observedData$positive[is.na(catchmentDb$observedData$positive)]<-0
+  
+  tmp<-catchmentDb$observedData %>% group_by(!!as.name(siteCols)) %>% summarize(positive = sum(positive,na.rm=TRUE))
+  dropList <- tmp %>% filter(positive<10)
+  for (k in 1:nrow(dropList)){
+    catchmentDb$observedData <- catchmentDb$observedData %>%  filter(!((!!as.name(siteCols) %in% dropList$site[k])))
+  }
   
   catchmentModelDefinition <- smoothModel(db=catchmentDb, shp=shp)
   catchmentModel <- modelTrainR(catchmentModelDefinition)
   
   # drop sites without enough data to estimate catchment
   # edge case for new sites (like publicSpace)
-  siteCols <- names(db$observedData)[grepl('site',names(db$observedData))]
   for (COLUMN in siteCols){
     db$observedData <- db$observedData %>% filter((!!as.name(COLUMN)) %in% unique(catchmentDb$observedData[[COLUMN]]))
   }
   
   # append catchment as intercept covariate
-  db$observedData <- db$observedData %>% left_join(catchmentModel$modeledData %>% select(site_type, geo, modeled_count_median))
+  db$observedData <- db$observedData %>% left_join(catchmentModel$modeledData %>% select(!!as.name(siteCols), geo, modeled_count_median))
   names(db$observedData)[names(db$observedData) %in% 'modeled_count_median'] <- 'catchment'
   db$observedData$catchment <- log(db$observedData$catchment) - mean(log(db$observedData$catchment))
   

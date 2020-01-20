@@ -4,7 +4,7 @@
 \alias{appendCatchmentModel}
 \title{appendCatchmentModel: function for adding catchment covariate estimated by smoothModel to dbViewR object for use in latentFieldModel}
 \usage{
-appendCatchmentModel(db, shp = NULL, source = "simulated_data",
+appendCatchmentModel(db, shp = NULL, source = "production",
   na.rm = TRUE)
 }
 \arguments{
