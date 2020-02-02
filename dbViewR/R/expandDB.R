@@ -220,5 +220,35 @@ expandDB <- function( db = dbViewR::selectFromDB(),
     db$observedData$age_row <- match(db$observedData$age_range_coarse_upper,validColumnData$age_range_coarse_upper)
   } 
   
+  # keep only sites active each year
+  count=0 
+  while(count<=1){ # i have no idea why I need to this twice, but I want to go to bed.
+    if(any(grepl('site', names(db$observedData)))){
+      COLNAME <- names(db$observedData)[grepl('site', names(db$observedData))]
+      for(k in 1:length(COLNAME)){
+        if('sfs_year' %in% names(db$observedData)){
+          tmp<-db$observedData %>% group_by(!!as.name(COLNAME[k]),sfs_year) %>% summarize(positive = sum(positive,na.rm=TRUE))
+          dropList <- tmp %>% filter(positive==0)
+          for (n in 1:nrow(dropList)){
+            db$observedData <- db$observedData %>%  filter(!(
+              (!!as.name(COLNAME[k]) %in% dropList[[COLNAME[k]]][n]) &
+                (sfs_year %in% dropList$sfs_year[k])  
+            )
+            )
+          }
+        } else {
+          tmp<-db$observedData %>% group_by(!!as.name(COLNAME[k])) %>% summarize(positive = sum(positive,na.rm=TRUE))
+          dropList <- tmp %>% filter(positive==0)
+          for (n in 1:nrow(dropList)){
+            db$observedData <- db$observedData %>%  filter(!(
+              (!!as.name(COLNAME[k]) %in% dropList[[COLNAME[k]]][n])   
+            )
+            )
+          }
+        }
+      }
+    }
+    count <- count+1
+  }
   return(db)
 }

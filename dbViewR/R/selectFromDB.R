@@ -110,24 +110,7 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
     if(all(db$present==TRUE)){
       db <- db %>% select(-present)
     }
-    
-    
-    ## clean up site_types
-    # modify names for standardized reporting (this will migrate into ID3C)
-    db$site_type[db$site == "ChildrensHospitalBellevue"] <- 'clinic'
-    db$site_type[db$site == "ChildrensHospitalSeattle"] <- 'clinic'
-    db$site_type[db$site == "ChildrensSeaMar"] <- 'clinic'
-    db$site_type[db$site == "Harborview"] <- 'longitudinalInpatient'
-    db$site_type[db$site == "HarborviewLobby"] <- 'workplace'
-    
-    db$site_type[db$site == "ColumbiaCenter"] <- 'workplace'
-    db$site_type[db$site == "KingStreetStation"] <- 'publicSpace'
-    db$site_type[db$site == "swabNSend"] <- 'self-test'
-    db$site_type[db$site == "UWSuzzalloLibrary"] <- 'collegeCampus'
 
-    # as.data.frame(db %>% group_by(site) %>% summarize(site_type = unique(site_type)))
-
-        
     DBI::dbDisconnect(rawData)
 
 
@@ -139,8 +122,8 @@ selectFromDB <- function( queryIn = jsonlite::toJSON(
   # combine PCR targets that describe one pathogen family
   db$pathogen[db$pathogen %in% c('Adenovirus_pan_2','Adenovirus_pan_1','AdV_1of2','AdV_2of2') ] <- 'AdV'
   db$pathogen[db$pathogen %in% c('12 Rhinovirus_pan_2','11 Rhinovirus_pan_1','RV_1of2','RV_2of2') ] <- 'RV'
-  db$pathogen[db$pathogen %in% c('Influenza_B','Flu_b_pan') ] <- 'Flu_B_pan'
-  db$pathogen[db$pathogen %in% c('flu_A_pan','Flu_a_pan') ] <- 'Flu_A_pan'
+  db$pathogen[db$pathogen %in% c('Influenza_B','Flu_b_pan','http://snomed.info/id/441345003') ] <- 'Flu_B_pan'
+  db$pathogen[db$pathogen %in% c('flu_A_pan','Flu_a_pan',"http://snomed.info/id/181000124108") ] <- 'Flu_A_pan'
   db$pathogen[db$pathogen %in% c('AP324NU') ] <- 'Flu_C_pan'
   db$pathogen[db$pathogen %in% c('hPIV1','hPIV2','hPIV1_hPIV2','hPIV3','hPIV4','hPIV3_hPIV4') ] <- 'hPIV'
   db$pathogen[db$pathogen %in% c('CoV_229E_CoV_OC43','CoV_HKU1_CoV_NL63','CoV_OC43','CoV_229E','CoV_HKU1','CoV_NL63') ] <- 'CoV'
