@@ -39,9 +39,9 @@ names(tmp2)<-tmp
 
 pathogenKeys <- list(
                      flu=fluPathogens, Flu_A_H1 = 'Flu_A_H1', Flu_A_H3 = 'Flu_A_H3', Flu_B_pan = 'Flu_B_pan', Flu_C_pan = 'Flu_C_pan',
-                     all='all', #other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles'))#,
-                     rsv = c('RSVA','RSVB'), RSVA='RSVA', RSVB='RSVB'#,
-                     # AdV='AdV',CoV='CoV',RV='RV'
+                     all='all', other_non_flu = setdiff(pathogens$pathogen,c(fluPathogens,'not_yet_tested','measles','Measles')),
+                     rsv = c('RSVA','RSVB'), RSVA='RSVA', RSVB='RSVB',
+                     AdV='AdV',CoV='CoV',RV='RV'
                      )
 
 
@@ -79,6 +79,10 @@ for (SOURCE in names(geoLevels)){
     GEO='residence_regional_name'
     PATHOGEN='flu'
 
+    # PATHOGEN='CoV'
+    # PATHOGEN='Flu_A_H1'
+    # PATHOGEN='Flu_B_pan'
+    
     # PATHOGEN='Flu_C_pan'
     # SOURCE='seattle_geojson'
     # SOURCE='wa_geojson'
@@ -117,7 +121,7 @@ for (SOURCE in names(geoLevels)){
       # temporarily removing childrens hospital update
       db$observedData$positive[db$observedData$site=='RetrospectiveChildrensHospitalSeattle' &
                                  db$observedData$encountered_week > '2019-W45']<-NA
-      db$observedData$positive[db$observedData$site=='retrospective' &
+      db$observedData$positive[db$observedData$site_type=='retrospective' &
                                  db$observedData$encountered_week > '2019-W45']<-NA
       
       
@@ -128,7 +132,7 @@ for (SOURCE in names(geoLevels)){
       
       
       # hack in all flu lab timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2020-01-19T13_15_24.869283-08_00.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2020-02-01T17_37_26.097214-08_00.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -145,7 +149,7 @@ for (SOURCE in names(geoLevels)){
       ## make sure always extrapolates to nowcastWeek 
       
         mostRecentWeek <- max(countData$observedData$encountered_week)
-        # mostRecentWeek <- '2019-W52'
+        # mostRecentWeek <- '2020-W03'
         
         minYear <- as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',nowcastWeek))
@@ -179,6 +183,10 @@ for (SOURCE in names(geoLevels)){
       
       countData$observedData$time_row<-as.numeric(countData$observedData$encountered_week)
       
+      
+      # edit missing plate from lab...
+      countData$observedData$positive[62]<-252
+      countData$observedData$n[62]<-252
       
       countModelDef<-smoothModel(countData)
       countModel <- modelTrainR(countModelDef)
@@ -263,13 +271,13 @@ for (SOURCE in names(geoLevels)){
               plotDat <- model$inla$summary.random$age_row_iid
             }
             plotDat$group <- unique(model$modeledData$site)
-            plotDat$color <- unique(model$modeledData$sfs_year)
+            # plotDat$color <- unique(model$modeledData$sfs_year)
             plotDat$age <- rep(unique(model$modeledData$age_range_coarse_upper), each = length(unique(model$modeledData$site_type)))
             N<-length(unique(model$modeledData$age_range_coarse_upper))
             plotDat$ageID <- rep(1:N, each = length(unique(model$modeledData$site_type)))
             print(
-              ggplot(plotDat) + geom_point(aes(x=ageID, y=mean, color=color), stat='identity') + theme_bw() +
-                geom_linerange(aes(x=ageID, ymin=`0.025quant`, ymax=`0.975quant`, color=color)) +
+              ggplot(plotDat) + geom_point(aes(x=ageID, y=mean), stat='identity') + theme_bw() +
+                geom_linerange(aes(x=ageID, ymin=`0.025quant`, ymax=`0.975quant`)) +
                 xlab('age_range_coarse_upper') + ylab('age random effect') + facet_wrap("group")+
                 scale_x_continuous(breaks=1:N,labels=as.character(unique(plotDat$age)))
             )
