@@ -55,7 +55,7 @@ geoLevels <- list(
                    # wa_geojson = c('residence_puma')
                  )
 
-siteTypes <- c("retrospective","collegeCampus","clinic","home","publicSpace","workplace")
+siteTypes <- c("retrospective","collegeCampus","clinic","home","publicSpace","workplace",'swabNSend')
 
 # nowcastWeek <- '2019-W25'
 # 1 week ahead of current week
@@ -99,32 +99,48 @@ for (SOURCE in names(geoLevels)){
     
     for (PATHOGEN in names(pathogenKeys)){
 
+      # examine sites
       queryIn <- list(
         SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week','site_type','site')),
         WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
         WHERE    =list(COLUMN='site_type', IN=siteTypes),
-        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week",'site_type')),
+        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week",'site_type','site')),
+        SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
+      )
+      db <- selectFromDB(  queryIn, source=SRC, na.rm=TRUE )
+      
+      as.data.frame(db$observedData %>% group_by(sfs_year,site) %>% summarize(positive = sum(positive,na.rm=TRUE)))
+      as.data.frame(db$observedData %>% group_by(sfs_year,site) %>% summarize(md = max(encountered_week,na.rm=TRUE)))
+      
+      # mostRecentTrustedWeek <- '2020-W06'
+      
+      
+      tmp<-db$observedData %>% group_by(sfs_year,site) %>% summarize(positive = sum(positive,na.rm=TRUE))
+      tmp$site[tmp$positive>=10]
+      
+
+      ## actual query
+      queryIn <- list(
+        SELECT   =list(COLUMN=c('pathogen', factors, GEO,'encountered_week','site')),
+        WHERE    =list(COLUMN='pathogen', IN=pathogenKeys[[PATHOGEN]]),
+        WHERE    =list(COLUMN='site', IN=      tmp$site[tmp$positive>=20]),
+        GROUP_BY =list(COLUMN=c(factors,GEO,"encountered_week",'site')),
         SUMMARIZE=list(COLUMN='pathogen', IN= pathogenKeys[[PATHOGEN]])
       )
       db <- selectFromDB(  queryIn, source=SRC, na.rm=TRUE )
       db <- expandDB(db, shp=shp, currentWeek =nowcastWeek)
     
-      as.data.frame(db$observedData %>% group_by(site,sfs_year) %>% summarize(positive = sum(positive,na.rm=TRUE)))
-      as.data.frame(db$observedData %>% group_by(site_type,sfs_year) %>% summarize(positive = sum(positive,na.rm=TRUE)))
       
-      # forecast past incomplete data
-      # db$observedData$positive[db$observedData$encountered_week >= paste('2019-W',isoweek(mostRecentSample), sep='')] <- NA
-      
-      
-      # db$observedData$positive[db$observedData$encountered_week > '2019-W52']<-NA
+      as.data.frame(db$observedData %>% group_by(sfs_year,site) %>% summarize(positive = sum(positive,na.rm=TRUE)))
       
       # temporarily removing childrens hospital update
-      db$observedData$positive[db$observedData$site=='RetrospectiveChildrensHospitalSeattle' &
-                                 db$observedData$encountered_week > '2019-W45']<-NA
       db$observedData$positive[db$observedData$site_type=='retrospective' &
                                  db$observedData$encountered_week > '2019-W45']<-NA
+      db$observedData$positive[db$observedData$site=='RetrospectiveChildrensHospitalSeattle' &
+                                 db$observedData$encountered_week > '2019-W45']<-NA
       
       
+
       
       library(incidenceMapR)
       library(modelServR)
@@ -132,7 +148,7 @@ for (SOURCE in names(geoLevels)){
       
       
       # hack in all flu lab timeseries
-      db2 <- read.csv('all_flu_by_time_query_result_2020-02-01T17_37_26.097214-08_00.csv')
+      db2 <- read.csv('all_flu_by_time_query_result_2020-02-16T16_33_54.661533-08_00.csv')
       lineages <- unique(db2$lineage)
       levels(db2$lineage)<-fluPathogens[c(1,2,4,5)]
       names(db2)[1]<-'pathogen'
@@ -149,7 +165,7 @@ for (SOURCE in names(geoLevels)){
       ## make sure always extrapolates to nowcastWeek 
       
         mostRecentWeek <- max(countData$observedData$encountered_week)
-        # mostRecentWeek <- '2020-W03'
+        mostRecentWeek <- '2020-W06'
         
         minYear <- as.numeric(gsub('-W[0-9]{2}','',mostRecentWeek))
         maxYear <- as.numeric(gsub('-W[0-9]{2}','',nowcastWeek))
@@ -258,6 +274,12 @@ for (SOURCE in names(geoLevels)){
             ggplot(model$modeledData %>% group_by_('encountered_week', GEO) %>% summarize(positive=sum(positive, na.rm=TRUE))) + 
               geom_line(aes_string(x='encountered_week',y="positive", color=GEO,group =GEO)) + 
               # facet_wrap('site_type',scales = 'free_y') +
+              guides(color=FALSE, fill=FALSE) + 
+              theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+            
+            ggplot(model$modeledData %>% group_by_('encountered_week', GEO, 'site_type') %>% summarize(positive=sum(positive, na.rm=TRUE))) + 
+              geom_line(aes_string(x='encountered_week',y="positive", color=GEO,group =GEO)) + 
+              facet_wrap('site_type',scales = 'free_y') +
               guides(color=FALSE, fill=FALSE) + 
               theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
             
